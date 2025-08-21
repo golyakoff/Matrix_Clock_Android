@@ -1,47 +1,74 @@
 package net.agolyakov.tetrisclockble
 
+import android.Manifest
+import android.app.Activity.RESULT_CANCELED
+import android.bluetooth.BluetoothAdapter
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.compose.rememberNavController
+import dagger.hilt.android.AndroidEntryPoint
+import net.agolyakov.tetrisclockble.navigation.SetupNavGraph
+import net.agolyakov.tetrisclockble.screen.MyRequestPermission
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
+import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
         setContent {
-            TetrisClockBLETheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Andrey Golyakov",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
-            }
+            MainContent()
         }
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.S)
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
+fun MainContent() {
     TetrisClockBLETheme {
-        Greeting("Android")
+        val navController = rememberNavController()
+        val homeViewModel: HomeViewModel = hiltViewModel()
+        val context = LocalContext.current
+
+        // Launcher для включения Bluetooth
+        val enableBluetoothLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_CANCELED) {
+                Toast.makeText(context, "Bluetooth не включён", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Запрос разрешений BLUETOOTH_SCAN и BLUETOOTH_CONNECT
+        MyRequestPermission(
+            permissions = listOf(
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )
+        ) { granted ->
+            if (granted) {
+                // Включаем Bluetooth только после получения разрешений
+                enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                homeViewModel.startScan()
+            } else {
+                Toast.makeText(context, "Не все разрешения даны", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Навигация
+        SetupNavGraph(navController = navController)
     }
 }
