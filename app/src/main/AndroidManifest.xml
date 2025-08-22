@@ -16,7 +16,8 @@
          Include "neverForLocation" only if you can strongly assert that
          your app never derives physical location from Bluetooth scan results.
          [android:usesPermissionFlags="neverForLocation"] -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
 
     <!-- Needed only if your app communicates with already-paired Bluetooth devices. -->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
@@ -27,12 +28,13 @@
 
     <!-- Needed only if your app uses Bluetooth scan results to derive physical location. -->
     <!-- uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /-->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="36" />
 
     <!-- Needed on Android 11 and lower, as a Bluetooth scan could potentially be used
          to gather information about the location of the user.
          If your app targets Android 9 (API level 28) or lower, you can declare the
          ACCESS_COARSE_LOCATION permission instead of the ACCESS_FINE_LOCATION permission. -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="36" />
 
     <application
         android:name=".MainApplication"

@@ -45,6 +45,8 @@ class HomeViewModel @Inject constructor(
         filters = listOf(
             ScanFilter.Builder().setServiceUuid(FILTER_UUID).build()
         )
+
+        startScan()
     }
 
     @RequiresPermission(value = Manifest.permission.BLUETOOTH_SCAN)
@@ -90,7 +92,7 @@ class HomeViewModel @Inject constructor(
     }
 
     companion object {
-        val FILTER_UUID = ParcelUuid.fromString("000000ff-0000-1000-8000-00805f9b34fb")!!
+        val FILTER_UUID = ParcelUuid.fromString("5DE498A1-E7A6-4F4A-B323-913741895AD0")!!
     }
 
     fun getDeviceRepository(): BleDeviceRepository {

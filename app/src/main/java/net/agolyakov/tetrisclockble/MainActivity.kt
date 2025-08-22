@@ -14,13 +14,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import net.agolyakov.tetrisclockble.navigation.SetupNavGraph
 import net.agolyakov.tetrisclockble.screen.MyRequestPermission
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
-import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -40,7 +38,6 @@ class MainActivity : ComponentActivity() {
 fun MainContent() {
     TetrisClockBLETheme {
         val navController = rememberNavController()
-        val homeViewModel: HomeViewModel = hiltViewModel()
         val context = LocalContext.current
 
         // Launcher для включения Bluetooth
@@ -56,13 +53,13 @@ fun MainContent() {
         MyRequestPermission(
             permissions = listOf(
                 Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.ACCESS_FINE_LOCATION
             )
         ) { granted ->
             if (granted) {
-                // Включаем Bluetooth только после получения разрешений
                 enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-                homeViewModel.startScan()
+
             } else {
                 Toast.makeText(context, "Не все разрешения даны", Toast.LENGTH_SHORT).show()
             }

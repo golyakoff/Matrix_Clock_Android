@@ -1,8 +1,5 @@
 package net.agolyakov.tetrisclockble.screen
 
-import android.bluetooth.BluetoothAdapter
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,7 +10,6 @@ import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -33,9 +29,9 @@ fun HomeScreen(
     navController: NavHostController,
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
-    //for getting list in no devices nearby
-    val devices = homeViewModel.getDeviceRepository().getDeviceList()
-    //val devices by homeViewModel.devices.observeAsState(emptyList())
+    // for getting list if no devices are nearby
+    // val devices = homeViewModel.getDeviceRepository().getDeviceList()
+    val devices by homeViewModel.devices.observeAsState(emptyList())
 
     Box(
         modifier = Modifier

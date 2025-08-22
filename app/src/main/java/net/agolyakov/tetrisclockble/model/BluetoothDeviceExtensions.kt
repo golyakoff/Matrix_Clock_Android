@@ -4,7 +4,7 @@ import android.bluetooth.BluetoothDevice
 
 fun BluetoothDevice.toBleDevice(): BleDevice {
     return BleDevice(
-        mfrName = this.name,
+        mfrName = this.address,//this.name,
         macAddress = this.address
     )
 }
