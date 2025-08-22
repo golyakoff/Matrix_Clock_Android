@@ -70,8 +70,9 @@ class HomeViewModel @Inject constructor(
 
     inner class BleScanCallback : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
+
             if (!foundDevices.containsKey(result.device.address)) {
-                foundDevices[result.device.address] = result.device.toBleDevice()
+                foundDevices[result.device.address] = result.toBleDevice()
             }
 
             _devices.postValue(foundDevices.values.toList())
@@ -80,7 +81,7 @@ class HomeViewModel @Inject constructor(
         override fun onBatchScanResults(results: MutableList<ScanResult>) {
             results.forEach { result ->
                 if (!foundDevices.containsKey(result.device.address)) foundDevices[result.device.address] =
-                    result.device.toBleDevice()
+                    result.toBleDevice()
             }
 
             _devices.postValue(foundDevices.values.toList())

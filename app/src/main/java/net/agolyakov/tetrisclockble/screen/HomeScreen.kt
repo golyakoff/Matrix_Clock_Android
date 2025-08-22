@@ -80,19 +80,31 @@ fun Device(device: BleDevice, navController: NavHostController) {
                     modifier = Modifier
                         .size(36.dp))
             }
-            Column(modifier = Modifier
-                .fillMaxWidth()) {
-                Text(
-                    text = device.overrideName ?: device.mfrName,
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = device.macAddress,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row {
+                    Text(
+                        text = device.overrideName ?: device.deviceName,
+                        style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Row {
+                    Column {
+                        Text(
+                            text = device.deviceMacAddr,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    Column (modifier = Modifier.padding(horizontal = 10.dp)) {
+                        Text(
+                            text = "Signal level: " + device.txPowerLevel,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
             }
         }
     }

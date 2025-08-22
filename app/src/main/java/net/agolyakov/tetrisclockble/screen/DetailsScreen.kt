@@ -25,7 +25,7 @@ fun DetailsScreen(
         Text(
             text =
                 if (device == null) "null"
-                else "${device.overrideName ?: device.mfrName}\n(${device.macAddress})",
+                else "${device.overrideName ?: device.deviceName}\n(${device.deviceMacAddr})",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary,
             textAlign = TextAlign.Center
@@ -39,8 +39,8 @@ fun DetailsScreenPreview() {
     DetailsScreen(
         rememberNavController(),
         BleDevice(
-            mfrName = "Mfr name",
+            deviceName = "Mfr name",
             overrideName = "Моё устройство",
-            macAddress = "00:00:00:00:00:ff"
+            deviceMacAddr = "00:00:00:00:00:ff"
         ))
 }

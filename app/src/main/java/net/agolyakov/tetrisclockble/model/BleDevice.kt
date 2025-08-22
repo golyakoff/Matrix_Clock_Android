@@ -4,8 +4,9 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-class BleDevice(
-    var mfrName: String,
-    var macAddress: String,
-    var overrideName: String? = null,
-): Parcelable
+data class BleDevice(
+    val deviceName: String,                     // Имя устройства, заданное производителем
+    val deviceMacAddr: String,                  // MAC-адрес
+    val txPowerLevel: Int = Integer.MIN_VALUE,  // Уровень мощности сигнала
+    val overrideName: String? = null,           // Опционально заданное пользователем имя
+) : Parcelable

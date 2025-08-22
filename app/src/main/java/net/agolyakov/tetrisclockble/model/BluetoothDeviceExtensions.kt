@@ -1,10 +1,11 @@
 package net.agolyakov.tetrisclockble.model
 
-import android.bluetooth.BluetoothDevice
+import android.bluetooth.le.ScanResult
 
-fun BluetoothDevice.toBleDevice(): BleDevice {
+fun ScanResult.toBleDevice(): BleDevice {
     return BleDevice(
-        mfrName = this.address,//this.name,
-        macAddress = this.address
+        deviceName = this.scanRecord?.deviceName ?: "<без имени>",
+        deviceMacAddr = this.device.address,
+        txPowerLevel = this.scanRecord?.txPowerLevel ?: Integer.MIN_VALUE
     )
 }
