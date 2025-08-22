@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -35,9 +36,10 @@ fun HomeScreen(
 
     Box(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.primary),
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .fillMaxHeight()
+            .systemBarsPadding(),
         contentAlignment = Alignment.TopCenter
-
     ) {
         DeviceList(devices , navController)
     }
@@ -59,7 +61,7 @@ fun DeviceList(deviceList: List<BleDevice>, navController: NavHostController) {
 fun Device(device: BleDevice, navController: NavHostController) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor =MaterialTheme.colorScheme.surfaceVariant),
+            containerColor =MaterialTheme.colorScheme.primary),
         modifier = Modifier
             .padding(5.dp, 5.dp, 5.dp, 0.dp)
             .clickable {
@@ -75,8 +77,8 @@ fun Device(device: BleDevice, navController: NavHostController) {
             Box(modifier = Modifier
                 .padding(24.dp)){
                 Icon(
-                    Icons.Outlined.Star,
-                    contentDescription = "test",
+                    Icons.Outlined.Settings,
+                    contentDescription = "Настроить",
                     modifier = Modifier
                         .size(36.dp))
             }
@@ -85,8 +87,8 @@ fun Device(device: BleDevice, navController: NavHostController) {
                     Text(
                         text = device.overrideName ?: device.deviceName,
                         style = MaterialTheme.typography.headlineSmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 Row {
@@ -94,14 +96,14 @@ fun Device(device: BleDevice, navController: NavHostController) {
                         Text(
                             text = device.deviceMacAddr,
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.primaryContainer
                         )
                     }
                     Column (modifier = Modifier.padding(horizontal = 10.dp)) {
                         Text(
-                            text = "Signal level: " + device.txPowerLevel,
+                            text = "Signal: " + device.txPowerLevel,
                             style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.secondary
+                            color = MaterialTheme.colorScheme.primaryContainer
                         )
                     }
                 }
