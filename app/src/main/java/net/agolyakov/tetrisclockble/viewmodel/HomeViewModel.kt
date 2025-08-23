@@ -2,13 +2,9 @@ package net.agolyakov.tetrisclockble.viewmodel
 
 import android.Manifest
 import android.bluetooth.le.*
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -40,7 +36,8 @@ class HomeViewModel @Inject constructor(
 
     init {
         settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+            .build()
 
         filters = listOf(
             ScanFilter.Builder().setServiceUuid(FILTER_UUID).build()
@@ -58,14 +55,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    @RequiresPermission(value = Manifest.permission.BLUETOOTH_SCAN)
-    override fun onCleared() {
-        super.onCleared()
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    fun stopScan() {
         if (callback != null) {
             scanner?.stopScan(callback)
             scanner = null
             callback = null
         }
+    }
+
+    @RequiresPermission(value = Manifest.permission.BLUETOOTH_SCAN)
+    override fun onCleared() {
+        super.onCleared()
+        stopScan()
     }
 
     inner class BleScanCallback : ScanCallback() {

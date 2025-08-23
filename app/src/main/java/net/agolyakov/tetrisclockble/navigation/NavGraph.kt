@@ -5,7 +5,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import net.agolyakov.tetrisclockble.model.BleDevice
-import net.agolyakov.tetrisclockble.screen.DetailsScreen
+import net.agolyakov.tetrisclockble.screen.DeviceScreen
 import net.agolyakov.tetrisclockble.screen.HomeScreen
 
 @Composable
@@ -19,11 +19,11 @@ fun SetupNavGraph(
             HomeScreen(navController)
         }
 
-        composable(route = Screen.Details.route) {
+        composable(route = Screen.Device.route) {
             val device: BleDevice? =
                 navController.previousBackStackEntry?.savedStateHandle?.get<BleDevice>("device")
 
-            DetailsScreen(navController, device)
+            DeviceScreen(navController, device)
         }
     }
 }

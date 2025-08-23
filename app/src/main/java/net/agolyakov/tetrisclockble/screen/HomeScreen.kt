@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
@@ -36,7 +35,7 @@ fun HomeScreen(
 
     Box(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.primaryContainer)
+            // .background(MaterialTheme.colorScheme.primaryContainer)
             .fillMaxHeight()
             .systemBarsPadding(),
         contentAlignment = Alignment.TopCenter
@@ -69,7 +68,7 @@ fun Device(device: BleDevice, navController: NavHostController) {
                     key = "device",
                     value = device
                 )
-                navController.navigate(Screen.Details.route)
+                navController.navigate(Screen.Device.route)
             }
     ){
         Row(verticalAlignment = Alignment.CenterVertically
@@ -92,20 +91,11 @@ fun Device(device: BleDevice, navController: NavHostController) {
                     )
                 }
                 Row {
-                    Column {
-                        Text(
-                            text = device.deviceMacAddr,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    }
-                    Column (modifier = Modifier.padding(horizontal = 10.dp)) {
-                        Text(
-                            text = "Signal: " + device.txPowerLevel,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        )
-                    }
+                    Text(
+                        text = device.deviceMacAddr,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    )
                 }
             }
         }

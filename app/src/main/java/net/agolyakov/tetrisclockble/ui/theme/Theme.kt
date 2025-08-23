@@ -279,4 +279,3 @@ fun TetrisClockBLETheme(
     content = content
   )
 }
-
