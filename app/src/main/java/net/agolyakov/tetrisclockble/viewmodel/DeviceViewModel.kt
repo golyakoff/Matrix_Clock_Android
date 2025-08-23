@@ -11,7 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import net.agolyakov.tetrisclockble.model.BleConnectionState
 import net.agolyakov.tetrisclockble.model.BleDevice
 import net.agolyakov.tetrisclockble.model.McOnOffReadCharacteristicHandler
-import net.agolyakov.tetrisclockble.model.McOnOffState
 import net.agolyakov.tetrisclockble.model.MyBleManager
 import net.agolyakov.tetrisclockble.service.BluetoothAdapterProvider
 import no.nordicsemi.android.ble.observer.ConnectionObserver
@@ -29,13 +28,12 @@ class DeviceViewModel @Inject constructor(
     //private val _services = MutableStateFlow<List<BluetoothGattService>>(emptyList())
     //val services = _services.asStateFlow()
 
-    private var _onOffState = McOnOffState(true)
+    private var _onOffState: Boolean = true
 
-    private var _matrixClockIsOn = MutableStateFlow(_onOffState.isOn)
+    private var _matrixClockIsOn = MutableStateFlow(_onOffState)
     val MatricClockisOn: StateFlow<Boolean> = _matrixClockIsOn
 
     var onOffReadCharacteristicHandler = McOnOffReadCharacteristicHandler(
-        _onOffState,
         _matrixClockIsOn)
 
     private val myBleManager: MyBleManager = MyBleManager(
@@ -77,7 +75,7 @@ class DeviceViewModel @Inject constructor(
     fun setOnOffCharacteristic() {
         val on = !_matrixClockIsOn.value
 
-        _onOffState = McOnOffState(on)
+        _onOffState = on
         _matrixClockIsOn.value = on
 
         if (myBleManager.isReady) {

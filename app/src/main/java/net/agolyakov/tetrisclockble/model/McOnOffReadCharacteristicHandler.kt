@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import no.nordicsemi.android.ble.data.Data
 
 class McOnOffReadCharacteristicHandler (
-    private var onOffState: McOnOffState,
     private var isOn: MutableStateFlow<Boolean>): ReadCharacteristicHandler {
     override fun onReadCharacteristicCallback(device: BluetoothDevice, data: Data) {
         val isOnByte: Byte = data.value!![0]
