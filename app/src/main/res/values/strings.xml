@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Часы-тетрис (Bluetooth LE клиент)</string>
+    <string name="app_name">Часы-тетрис</string>
+    <string name="app_full_name">Часы-тетрис | Bluetooth LE клиент</string>
 </resources>

@@ -14,11 +14,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import net.agolyakov.tetrisclockble.navigation.SetupNavGraph
 import net.agolyakov.tetrisclockble.screen.MyRequestPermission
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
+import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -59,7 +61,6 @@ fun MainContent() {
         ) { granted ->
             if (granted) {
                 enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-
             } else {
                 Toast.makeText(context, "Не все разрешения даны", Toast.LENGTH_SHORT).show()
             }

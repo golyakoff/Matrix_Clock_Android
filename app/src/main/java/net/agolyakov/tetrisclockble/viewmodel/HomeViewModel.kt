@@ -42,8 +42,6 @@ class HomeViewModel @Inject constructor(
         filters = listOf(
             ScanFilter.Builder().setServiceUuid(FILTER_UUID).build()
         )
-
-        startScan()
     }
 
     @RequiresPermission(value = Manifest.permission.BLUETOOTH_SCAN)

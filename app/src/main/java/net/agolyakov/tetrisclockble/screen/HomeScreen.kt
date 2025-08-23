@@ -27,7 +27,7 @@ import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    homeViewModel: HomeViewModel = hiltViewModel()
+    homeViewModel: HomeViewModel
 ) {
     // for getting list if no devices are nearby
     // val devices = homeViewModel.getDeviceRepository().getDeviceList()

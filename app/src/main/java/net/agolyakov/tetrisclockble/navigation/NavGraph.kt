@@ -1,12 +1,15 @@
 package net.agolyakov.tetrisclockble.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import net.agolyakov.tetrisclockble.model.BleDevice
 import net.agolyakov.tetrisclockble.screen.DeviceScreen
 import net.agolyakov.tetrisclockble.screen.HomeScreen
+import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 
 @Composable
 fun SetupNavGraph(
@@ -16,7 +19,11 @@ fun SetupNavGraph(
         startDestination = Screen.Home.route
     ) {
         composable(route = Screen.Home.route) {
-            HomeScreen(navController)
+            var homeViewModel: HomeViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                homeViewModel.startScan()
+            }
+            HomeScreen(navController, homeViewModel)
         }
 
         composable(route = Screen.Device.route) {
