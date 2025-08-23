@@ -4,12 +4,17 @@ import android.bluetooth.BluetoothDevice
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
 import net.agolyakov.tetrisclockble.model.BleConnectionState
 import net.agolyakov.tetrisclockble.model.BleDevice
+import net.agolyakov.tetrisclockble.model.McManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.model.McOnOffReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.model.MyBleManager
 import net.agolyakov.tetrisclockble.service.BluetoothAdapterProvider
@@ -25,20 +30,37 @@ class DeviceViewModel @Inject constructor(
     private val _connectionState = MutableStateFlow<BleConnectionState>(BleConnectionState.Disconnected)
     val connectionState = _connectionState.asStateFlow()
 
-    //private val _services = MutableStateFlow<List<BluetoothGattService>>(emptyList())
-    //val services = _services.asStateFlow()
-
+    // ON/OFF
     private var _onOffState: Boolean = true
-
     private var _matrixClockIsOn = MutableStateFlow(_onOffState)
-    val MatricClockisOn: StateFlow<Boolean> = _matrixClockIsOn
-
+    val MatrixClockIsOn: StateFlow<Boolean> = _matrixClockIsOn
     var onOffReadCharacteristicHandler = McOnOffReadCharacteristicHandler(
         _matrixClockIsOn)
 
+    // Manual Brightness
+    private var _manualBrightnessState: Byte = 0
+    private var _matrixClockManualBrightness = MutableStateFlow(_manualBrightnessState)
+    private val _debouncedBrightness = MutableSharedFlow<Byte>(extraBufferCapacity = 1)
+    val MatrixClockManualBrightness : StateFlow<Byte> = _matrixClockManualBrightness
+    var manualBrightnessReadCharacteristicHandler = McManualBrightnessReadCharacteristicHandler(
+        _matrixClockManualBrightness)
+
+    init {
+        viewModelScope.launch {
+            _debouncedBrightness
+                .debounce(300) // ждём 300 мс после последнего изменения
+                .collect { value ->
+                    if (myBleManager.isReady) {
+                        myBleManager.setManualBrightnessCharacteristic(_manualBrightnessState)
+                    }
+                }
+        }
+    }
+
     private val myBleManager: MyBleManager = MyBleManager(
         bluetoothAdapterProvider.getContext(),
-        onOffReadCharacteristicHandler)
+        onOffReadCharacteristicHandler,
+        manualBrightnessReadCharacteristicHandler)
 
     fun connectToDevice(device: BleDevice?)
     {
@@ -66,13 +88,7 @@ class DeviceViewModel @Inject constructor(
         myBleManager.disconnect().enqueue()
     }
 
-    fun getOnOffCharacteristic() {
-        if (myBleManager.isReady) {
-            myBleManager.getOnOffCharacteristic()
-        }
-    }
-
-    fun setOnOffCharacteristic() {
+    fun toggleOnOffCharacteristic() {
         val on = !_matrixClockIsOn.value
 
         _onOffState = on
@@ -81,6 +97,12 @@ class DeviceViewModel @Inject constructor(
         if (myBleManager.isReady) {
             myBleManager.setOnOffCharacteristic(on)
         }
+    }
+
+    fun setManualBrightnessCharacteristic(brightness: Byte) {
+        _manualBrightnessState = brightness
+        _matrixClockManualBrightness.value = brightness
+        _debouncedBrightness.tryEmit(brightness)
     }
 
     private val connectionObserver = object : ConnectionObserver {
@@ -92,6 +114,7 @@ class DeviceViewModel @Inject constructor(
 
         override fun onDeviceReady(device: BluetoothDevice) {
             myBleManager.getOnOffCharacteristic()
+            myBleManager.getManualBrightnessCharacteristic()
         }
 
         override fun onDeviceDisconnecting(device: BluetoothDevice) {}
