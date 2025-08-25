@@ -4,4 +4,6 @@
     <string name="mc_turn_on_clock">Включить часы</string>
     <string name="mc_turn_off_clock">Погасить часы</string>
     <string name="mc_manual_brightness">Яркость</string>
+    <string name="perm_bluetooth_is_off">Приложение требует включения Bluetooth</string>
+    <string name="perm_not_enough_permissions">Приложение не получило необходимых разрешений</string>
 </resources>

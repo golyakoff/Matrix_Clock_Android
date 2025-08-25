@@ -14,13 +14,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import net.agolyakov.tetrisclockble.navigation.SetupNavGraph
 import net.agolyakov.tetrisclockble.screen.MyRequestPermission
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
-import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -47,26 +45,44 @@ fun MainContent() {
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
             if (result.resultCode == RESULT_CANCELED) {
-                Toast.makeText(context, "Bluetooth не включён", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.perm_bluetooth_is_off, Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Запрос разрешений BLUETOOTH_SCAN и BLUETOOTH_CONNECT
-        MyRequestPermission(
-            permissions = listOf(
-                Manifest.permission.BLUETOOTH_SCAN,
-                Manifest.permission.BLUETOOTH_CONNECT,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        ) { granted ->
+        val permissions =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                listOf(
+                    Manifest.permission.BLUETOOTH_SCAN,
+                    Manifest.permission.BLUETOOTH_CONNECT)
+            else
+                listOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION)
+
+        // Запрос разрешений
+        MyRequestPermission(permissions) { granted ->
             if (granted) {
                 enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
             } else {
-                Toast.makeText(context, "Не все разрешения даны", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, R.string.perm_not_enough_permissions, Toast.LENGTH_SHORT).show()
             }
         }
 
         // Навигация
         SetupNavGraph(navController = navController)
+    }
+
+    fun getBlePermissions(): List<String> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Android 12+ (API 31+)
+            listOf(
+                android.Manifest.permission.BLUETOOTH_SCAN,
+                android.Manifest.permission.BLUETOOTH_CONNECT
+            )
+        } else {
+            // Android 6 – Android 11
+            listOf(
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            )
+        }
     }
 }
