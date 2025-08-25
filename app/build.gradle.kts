@@ -13,12 +13,21 @@ android {
 
     defaultConfig {
         applicationId = "net.agolyakov.tetrisclockble"
-        minSdk = 28    //
-        targetSdk = 36 //
+        minSdk = 28     // Android 9
+        targetSdk = 36  // Android 16
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    applicationVariants.all {
+        outputs.all {
+            val variantName = name
+            val apkOutput = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            apkOutput.outputFileName =
+                "tetris-clock-${variantName}-v${versionName}.apk"
+        }
     }
 
     buildTypes {
