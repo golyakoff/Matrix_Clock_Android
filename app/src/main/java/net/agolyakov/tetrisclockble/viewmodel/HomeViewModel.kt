@@ -12,16 +12,13 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import net.agolyakov.tetrisclockble.data.BleDeviceRepository
 import net.agolyakov.tetrisclockble.model.BleDevice
 import net.agolyakov.tetrisclockble.model.toBleDevice
-import net.agolyakov.tetrisclockble.service.BleControlManager
 import net.agolyakov.tetrisclockble.service.BluetoothAdapterProvider
 import javax.inject.Inject
-
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val deviceRepository: BleDeviceRepository,
     private val bluetoothAdapterProvider: BluetoothAdapterProvider,
-    private val bleControlManager: BleControlManager
 ): ViewModel() {
     private val foundDevices = HashMap<String, BleDevice>()
     private val _devices: MutableLiveData<List<BleDevice>> = MutableLiveData()
@@ -31,18 +28,15 @@ class HomeViewModel @Inject constructor(
     private var scanner: BluetoothLeScanner? = null
     private var callback: BleScanCallback? = null
 
-    private val settings: ScanSettings
-    private val filters: List<ScanFilter>
-
-    init {
-        settings = ScanSettings.Builder()
+    private val settings: ScanSettings =
+        ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
             .build()
 
-        filters = listOf(
-            ScanFilter.Builder().setServiceUuid(FILTER_UUID).build()
-        )
-    }
+    private val filters: List<ScanFilter> = listOf(
+        ScanFilter.Builder()
+            .setServiceUuid(FILTER_UUID)
+            .build())
 
     @RequiresPermission(value = Manifest.permission.BLUETOOTH_SCAN)
     fun startScan() {
