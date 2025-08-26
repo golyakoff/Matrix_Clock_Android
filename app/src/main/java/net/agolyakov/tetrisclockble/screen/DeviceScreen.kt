@@ -2,8 +2,11 @@ package net.agolyakov.tetrisclockble.screen
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -14,8 +17,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -24,6 +31,7 @@ import androidx.navigation.NavHostController
 import net.agolyakov.tetrisclockble.model.BleDevice
 import net.agolyakov.tetrisclockble.viewmodel.DeviceViewModel
 import net.agolyakov.tetrisclockble.R
+import net.agolyakov.tetrisclockble.model.McTime
 
 @Composable
 fun DeviceScreen(
@@ -33,6 +41,12 @@ fun DeviceScreen(
     val viewModel: DeviceViewModel = hiltViewModel()
     val isOn by viewModel.matrixClockIsOn.collectAsState()
     val manualBrightness by viewModel.matrixClockManualBrightness.collectAsState()
+    val bleTime by viewModel.matrixClockBleDeviceTime.collectAsState()
+    var phoneTime by remember { mutableStateOf(McTime.now()) }
+
+    LaunchedEffect(bleTime) {
+        phoneTime = McTime.now()
+    }
 
     LaunchedEffect(device) {
         // как только экран появился – просим VM подключиться
@@ -86,6 +100,76 @@ fun DeviceScreen(
                 modifier = Modifier
                     .fillMaxWidth()
             )
+
+            DeviceAndPhoneClocksWithSync(
+                bleTime,
+                phoneTime,
+                { viewModel.syncBleWithPhone() }
+            )
+        }
+    }
+}
+
+@Composable
+fun DeviceAndPhoneClocksWithSync(
+    bleTime: McTime,
+    phoneTime: McTime,
+    onSyncClick: () -> Unit
+) {
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Row (
+            modifier = Modifier.fillMaxWidth()
+        ){
+            Column (
+                modifier = Modifier
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+
+                Text("Время часов", style = MaterialTheme.typography.titleMedium)
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        bleTime.formatTime(),
+                        style = MaterialTheme.typography.headlineLarge
+                    )
+                    Text(
+                        bleTime.formatDate(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            Column (
+                modifier = Modifier
+                    .weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ){
+
+                Text("Время телефона", style = MaterialTheme.typography.titleMedium)
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        phoneTime.formatTime(),
+                        style = MaterialTheme.typography.headlineLarge
+                    )
+                    Text(
+                        phoneTime.formatDate(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        Button(onClick = onSyncClick) {
+            Text("Синхронизировать")
         }
     }
 }

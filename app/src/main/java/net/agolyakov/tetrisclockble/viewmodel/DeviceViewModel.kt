@@ -183,6 +183,13 @@ class DeviceViewModel @Inject constructor(
         }
     }
 
+    fun syncBleWithPhone() {
+        val mcNow = McTime.now()
+        myBleManager.setTimeCharacteristic(mcNow)
+        _bleDeviceTime = mcNow
+        _matrixClockBleDeviceTime.value = mcNow
+    }
+
     private val connectionObserver = object : ConnectionObserver {
         override fun onDeviceConnecting(device: BluetoothDevice) {}
 

@@ -10,7 +10,7 @@ class McTimeReadCharacteristicHandler (
     override fun onReadCharacteristicCallback(device: BluetoothDevice, data: Data) {
         val hexValues = data.value!!.map { String.format("%02X", it) }.toList()
         Log.d(
-            "McOnOffReadCharacteristicHandler",
+            "McTimeReadCharacteristicHandler",
             "onReadCharacteristicCallback(), data =" +
                     "[ ${hexValues.joinToString(separator = ", ")}]")
 
