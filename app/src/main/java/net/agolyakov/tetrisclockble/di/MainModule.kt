@@ -7,7 +7,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import net.agolyakov.tetrisclockble.data.BleDeviceRepository
-import net.agolyakov.tetrisclockble.service.BleControlManager
 import net.agolyakov.tetrisclockble.service.BluetoothAdapterProvider
 import javax.inject.Singleton
 
@@ -26,10 +25,4 @@ object MainModule {
     fun provideBluetoothAdapterProvider(
         @ApplicationContext context: Context
     ) = BluetoothAdapterProvider(context = context)
-
-    @Provides
-    @Singleton
-    fun provideBleControlManager(
-        @ApplicationContext context: Context
-    ) = BleControlManager(context = context)
 }

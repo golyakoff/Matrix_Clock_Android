@@ -10,30 +10,59 @@ import java.util.UUID
 
 class MyBleManager (
     context: Context,
-    private val onOffReadCharacteristicHandler: McOnOffReadCharacteristicHandler,
-    private val manualBrightValueCharacteristicHandler: McManualBrightnessReadCharacteristicHandler
-)
+    val timeReadCharacteristicHandler: McTimeReadCharacteristicHandler,
+    val onOffReadCharacteristicHandler: McOnOffReadCharacteristicHandler,
+    val manualBrightnessReadCharacteristicHandler: McManualBrightnessReadCharacteristicHandler,
+    val autoBrightnessReadCharacteristicHandler: McAutoBrightnessReadCharacteristicHandler,
+    val turnOnAlarmReadCharacteristicHandler: McTurnOnAlarmReadCharacteristicHandler,
+    val turnOffAlarmReadCharacteristicHandler: McTurnOffAlarmReadCharacteristicHandler,
+
+    )
     : BleManager(context)
 {
+    private var mcTimeCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOnOffCharacteristic: BluetoothGattCharacteristic? = null
     private var mcManualBrightValueCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcAutoBrightnessCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcTurnOnAlarmCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcTurnOffAlarmCharacteristic: BluetoothGattCharacteristic? = null
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
         gatt.getService(SERVICE_CONTROL_UUID)?.let { service ->
+            mcTimeCharacteristic = service.getCharacteristic(MC_TIME_CHAR_UUID)
             mcOnOffCharacteristic = service.getCharacteristic(MC_TURN_ON_CONTROL_CHAR_UUID)
             mcManualBrightValueCharacteristic = service.getCharacteristic(MC_MANUAL_BRIGHT_VAL_CHAR_UUID)
+            mcAutoBrightnessCharacteristic = service.getCharacteristic(MC_AUTO_BRIGHT_ENABLE_CHAR_UUID)
+            mcTurnOnAlarmCharacteristic = service.getCharacteristic(MC_TURN_ON_ALARM_CHAR_UUID)
+            mcTurnOffAlarmCharacteristic = service.getCharacteristic(MC_TURN_OFF_ALARM_CHAR_UUID)
         }
 
-        return mcOnOffCharacteristic != null
+        return mcTimeCharacteristic != null
+                && mcOnOffCharacteristic != null
                 && mcManualBrightValueCharacteristic != null
+                && mcAutoBrightnessCharacteristic != null
+                && mcTurnOnAlarmCharacteristic != null
+                && mcTurnOffAlarmCharacteristic != null
     }
 
     override fun onServicesInvalidated() {
+        mcTimeCharacteristic = null
         mcOnOffCharacteristic = null
         mcManualBrightValueCharacteristic = null
+        mcAutoBrightnessCharacteristic = null
+        mcTurnOnAlarmCharacteristic = null
+        mcTurnOffAlarmCharacteristic = null
     }
 
     override fun initialize() {
+        setNotificationCallback(mcTimeCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                timeReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+        enableNotifications(mcTimeCharacteristic).enqueue()
+
         setNotificationCallback(mcOnOffCharacteristic)
             .with { device: BluetoothDevice?, data: Data? ->
                 onOffReadCharacteristicHandler.onReadCharacteristicCallback(
@@ -41,14 +70,16 @@ class MyBleManager (
                     data!!)
             }
         enableNotifications(mcOnOffCharacteristic).enqueue()
+    }
 
-        setNotificationCallback(mcManualBrightValueCharacteristic)
+    fun getTimeCharacteristic() {
+        readCharacteristic(mcTimeCharacteristic)
             .with { device: BluetoothDevice?, data: Data? ->
-                manualBrightValueCharacteristicHandler.onReadCharacteristicCallback(
+                timeReadCharacteristicHandler.onReadCharacteristicCallback(
                     device!!,
                     data!!)
             }
-        enableNotifications(mcManualBrightValueCharacteristic).enqueue()
+            .enqueue()
     }
 
     fun getOnOffCharacteristic() {
@@ -64,11 +95,49 @@ class MyBleManager (
     fun getManualBrightnessCharacteristic() {
         readCharacteristic(mcManualBrightValueCharacteristic)
             .with { device: BluetoothDevice?, data: Data? ->
-                manualBrightValueCharacteristicHandler.onReadCharacteristicCallback(
+                manualBrightnessReadCharacteristicHandler.onReadCharacteristicCallback(
                     device!!,
                     data!!)
             }
             .enqueue()
+    }
+
+    fun getAutoBrightnessCharacteristic() {
+        readCharacteristic(mcAutoBrightnessCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                autoBrightnessReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+            .enqueue()
+    }
+
+    fun getTurnOnAlarmCharacteristic() {
+        readCharacteristic(mcTurnOnAlarmCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                turnOnAlarmReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+            .enqueue()
+    }
+
+    fun getTurnOffAlarmCharacteristic() {
+        readCharacteristic(mcTurnOffAlarmCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                turnOffAlarmReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+            .enqueue()
+    }
+
+    fun setTimeCharacteristic(time: McTime) {
+        writeCharacteristic(
+            mcTimeCharacteristic,
+            time.toByteArray(),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
     }
 
     fun setOnOffCharacteristic(on: Boolean) {
@@ -87,24 +156,69 @@ class MyBleManager (
         ).enqueue()
     }
 
+    fun setAutoBrightnessCharacteristic(on: Boolean) {
+        writeCharacteristic(
+            mcAutoBrightnessCharacteristic,
+            byteArrayOf((if (on) CMD_CONTROL_LED_ON else CMD_CONTROL_LED_OFF).toByte()),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
+    }
+
+    fun setTurnOnAlarmCharacteristic(alarm: McTurnOnOffAlarm) {
+        writeCharacteristic(
+            mcTurnOnAlarmCharacteristic,
+            alarm.toByteArray(),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
+    }
+
+    fun setTurnOffAlarmCharacteristic(alarm: McTurnOnOffAlarm) {
+        writeCharacteristic(
+            mcTurnOffAlarmCharacteristic,
+            alarm.toByteArray(),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
+    }
+
     companion object {
         // Matrix Clock Service
         val SERVICE_CONTROL_UUID: UUID = UUID.fromString("5DE498A1-E7A6-4F4A-B323-913741895AD0")
 
         // Manual control point to turn off/on the displaying of the time
         // This manual operation has the lower priority than the alarm.
-        // M Read, Write, Notify
+        // Mode: Read, Write, Notify
         val MC_TURN_ON_CONTROL_CHAR_UUID: UUID = UUID.fromString("2E126C52-37B8-4A7D-9688-28E33104C0E1")
         const val CMD_CONTROL_LED_ON = 0x1
         const val CMD_CONTROL_LED_OFF = 0x0
 
         // Control point to switch between auto and manual brightness adjustment value
-        // M Read, Write
-        //val MC_AUTO_BRIGHT_ENABLE_CHAR_UUID: UUID = UUID.fromString("9B078810-99AB-4423-B3A8-6F2E86A09582")
+        // Mode: Read, Write
+        val MC_AUTO_BRIGHT_ENABLE_CHAR_UUID: UUID = UUID.fromString("9B078810-99AB-4423-B3A8-6F2E86A09582")
 
         // Control point to setup manual brightness adjustment value
         // Possible values are 0..15 (0 is not fully Off, just minimum value)
-        // M Read, Write
+        // Mode: Read, Write
         val MC_MANUAL_BRIGHT_VAL_CHAR_UUID: UUID = UUID.fromString("117ED80D-AF6E-4E4D-B900-48F68725A7D3")
+
+        // Alarm timer to turn ON the clock at a specific time (for example, in the morning).
+        // This alarm event takes precedence over manual control.
+        // Mode: Read, Write
+        val MC_TURN_ON_ALARM_CHAR_UUID: UUID = UUID.fromString("6BDBD293-B623-411C-BB2A-F429EAF93CF1")
+
+        // Alarm timer to turn OFF the clock at a specific time (for example, at night).
+        // This alarm event takes precedence over manual control.
+        // Mode: Read, Write
+        val MC_TURN_OFF_ALARM_CHAR_UUID: UUID = UUID.fromString("84915734-BF86-46E7-B394-22E25B3F9007")
+
+        // MatrixClock time in UINT32 format: number of seconds since 1900 year.
+        // Time is in local time zone (not UTC, no time zone specified).
+        // Mode: Read, Write, Notify
+        val MC_TIME_CHAR_UUID: UUID = UUID.fromString("D5BD8D18-BD9A-4EF4-B206-8C78FFBE2774")
+
+
+        // MatrixClock time in formatted string "YYYY.MM.DD HH:mm:ss", example: "2023.12.31 09:05:42"
+        // Time is in local time zone (not UTC, no time zone specified).
+        // Mode: Read, Notify
+        // val MC_TIME_STR_CHAR_UUID: UUID = UUID.fromString("AA063B0F-DB36-47D0-8F19-A70FA97D86DF")
     }
 }

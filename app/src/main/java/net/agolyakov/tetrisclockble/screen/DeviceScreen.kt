@@ -31,8 +31,8 @@ fun DeviceScreen(
     device: BleDevice?,
 ) {
     val viewModel: DeviceViewModel = hiltViewModel()
-    val isOn by viewModel.MatrixClockIsOn.collectAsState()
-    val manualBrightness by viewModel.MatrixClockManualBrightness.collectAsState()
+    val isOn by viewModel.matrixClockIsOn.collectAsState()
+    val manualBrightness by viewModel.matrixClockManualBrightness.collectAsState()
 
     LaunchedEffect(device) {
         // как только экран появился – просим VM подключиться
