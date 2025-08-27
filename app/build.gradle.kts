@@ -15,8 +15,8 @@ android {
         applicationId = "net.agolyakov.tetrisclockble"
         minSdk = 28     // Android 9
         targetSdk = 36  // Android 16
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.androidx.runtime.livedata)
+    implementation(libs.material3)
     kapt(libs.hilt.compiler)
     implementation(libs.nordic.ble)
     testImplementation(libs.junit)

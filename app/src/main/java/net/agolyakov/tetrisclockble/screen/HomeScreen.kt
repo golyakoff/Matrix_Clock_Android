@@ -19,8 +19,9 @@ import androidx.compose.runtime.getValue
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import net.agolyakov.tetrisclockble.data.BleDeviceRepository
-import net.agolyakov.tetrisclockble.model.BleDevice
+import net.agolyakov.tetrisclockble.ble.BleDevice
 import net.agolyakov.tetrisclockble.navigation.Screen
+import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
 import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 
 @Composable
@@ -34,7 +35,7 @@ fun HomeScreen(
 
     Box(
         modifier = Modifier
-            // .background(MaterialTheme.colorScheme.primaryContainer)
+            .background(MaterialTheme.colorScheme.background)
             .fillMaxHeight()
             .systemBarsPadding(),
         contentAlignment = Alignment.TopCenter
@@ -48,6 +49,7 @@ fun DeviceList(deviceList: List<BleDevice>, navController: NavHostController) {
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background),
     ) {
         itemsIndexed(deviceList) {
             _, item -> Device(item, navController)
@@ -83,7 +85,7 @@ fun Device(device: BleDevice, navController: NavHostController) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row {
                     Text(
-                        text = device.overrideName ?: device.deviceName,
+                        text = device.friendlyName ?: device.deviceName,
                         style = MaterialTheme.typography.headlineSmall,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onPrimary
@@ -91,7 +93,7 @@ fun Device(device: BleDevice, navController: NavHostController) {
                 }
                 Row {
                     Text(
-                        text = device.deviceMacAddr,
+                        text = device.deviceMacAddress,
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primaryContainer
                     )
@@ -102,8 +104,19 @@ fun Device(device: BleDevice, navController: NavHostController) {
 }
 
 @Composable
-@Preview(showBackground = true)
-fun DeviceListPreview() {
-    val deviceList = BleDeviceRepository().getDeviceList()
-    DeviceList(deviceList, rememberNavController())
+@Preview(showBackground = true, name = "Light")
+fun DeviceListPreview_1() {
+    TetrisClockBLETheme(darkTheme = false) {
+        val deviceList = BleDeviceRepository().getDeviceList()
+        DeviceList(deviceList, rememberNavController())
+    }
+}
+
+@Composable
+@Preview(showBackground = true, name = "Dark")
+fun DeviceListPreview_2() {
+    TetrisClockBLETheme(darkTheme = true) {
+        val deviceList = BleDeviceRepository().getDeviceList()
+        DeviceList(deviceList, rememberNavController())
+    }
 }

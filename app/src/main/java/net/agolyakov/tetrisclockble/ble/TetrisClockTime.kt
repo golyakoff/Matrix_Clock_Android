@@ -1,16 +1,15 @@
-package net.agolyakov.tetrisclockble.model
+package net.agolyakov.tetrisclockble.ble
 
 import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-data class McTime(
+data class TetrisClockTime(
     val localDateTime: LocalDateTime = LocalDateTime.MIN
 ) {
     companion object {
-        fun fromByteArray(raw: ByteArray): McTime {
+        fun fromByteArray(raw: ByteArray): TetrisClockTime {
             require(raw.size == 4) { "Time characteristic must be 4 bytes" }
 
             val secondsSince1900 =
@@ -19,7 +18,7 @@ data class McTime(
                     ((raw[1].toLong() and 0xFF) shl 8) or
                     (raw[0].toLong() and 0xFF)
 
-            return McTime(
+            return TetrisClockTime(
                 LocalDateTime.ofInstant(
                     Instant.ofEpochSecond(secondsSince1900),
                     ZoneOffset.UTC
@@ -27,8 +26,8 @@ data class McTime(
             )
         }
 
-        fun now(): McTime =
-            McTime(LocalDateTime.now())
+        fun now(): TetrisClockTime =
+            TetrisClockTime(LocalDateTime.now())
     }
 
     fun toByteArray(): ByteArray {
@@ -46,6 +45,6 @@ data class McTime(
         localDateTime.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
 
     fun formatDate(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+        localDateTime.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
 
 }

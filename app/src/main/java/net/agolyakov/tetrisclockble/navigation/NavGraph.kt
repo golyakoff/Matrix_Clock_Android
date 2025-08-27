@@ -6,7 +6,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import net.agolyakov.tetrisclockble.model.BleDevice
+import net.agolyakov.tetrisclockble.ble.BleDevice
 import net.agolyakov.tetrisclockble.screen.DeviceScreen
 import net.agolyakov.tetrisclockble.screen.HomeScreen
 import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
@@ -19,7 +19,7 @@ fun SetupNavGraph(
         startDestination = Screen.Home.route
     ) {
         composable(route = Screen.Home.route) {
-            var homeViewModel: HomeViewModel = hiltViewModel()
+            val homeViewModel: HomeViewModel = hiltViewModel()
             LaunchedEffect(Unit) {
                 homeViewModel.startScan()
             }

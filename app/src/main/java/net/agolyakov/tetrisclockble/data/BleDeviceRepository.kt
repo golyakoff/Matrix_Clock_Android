@@ -1,42 +1,46 @@
 package net.agolyakov.tetrisclockble.data
 
-import net.agolyakov.tetrisclockble.model.BleDevice
+import net.agolyakov.tetrisclockble.ble.BleDevice
 
 class BleDeviceRepository() {
     private val _deviceList = listOf (
         BleDevice(
             deviceName = "LED Lamp",
-            deviceMacAddr = "11:22:33:44:55:66"
+            deviceMacAddress = "11:22:33:44:55:66"
         ),
         BleDevice(
             deviceName = "Matrix Clock YEY",
-            deviceMacAddr = "11:22:33:44:55:77",
-            overrideName = "Часы Андрея в гостиной"
+            deviceMacAddress = "11:22:33:44:55:77",
+            friendlyName = "Часы Андрея в гостиной"
         ),
         BleDevice(
             deviceName = "Matrix Clock BRW",
-            deviceMacAddr = "11:22:33:44:55:21",
-            overrideName = "Часы в десткой"
+            deviceMacAddress = "11:22:33:44:55:21",
+            friendlyName = "Часы в десткой"
         ),
         BleDevice(
             deviceName = "Matrix Clock 1",
-            deviceMacAddr = "11:22:33:44:55:41",
+            deviceMacAddress = "11:22:33:44:55:41",
         ),
         BleDevice(
             deviceName = "Matrix Clock 2",
-            deviceMacAddr = "11:22:33:44:55:da"
+            deviceMacAddress = "11:22:33:44:55:da"
         ),
         BleDevice(
             deviceName = "Matrix Clock 3",
-            deviceMacAddr = "11:22:33:44:55:bd",
+            deviceMacAddress = "11:22:33:44:55:bd",
         ),
         BleDevice(
             deviceName = "Matrix Clock 4",
-            deviceMacAddr = "11:22:33:44:55:ff"
+            deviceMacAddress = "11:22:33:44:55:ff"
         ),
         BleDevice(
             deviceName = "Matrix Clock 5",
-            deviceMacAddr = "11:22:33:44:55:da"
+            deviceMacAddress = "11:22:33:44:55:da"
+        ),
+        BleDevice(
+            deviceName = "Matrix Clock 6",
+            deviceMacAddress = "11:22:33:44:55:da"
         ),
     )
 

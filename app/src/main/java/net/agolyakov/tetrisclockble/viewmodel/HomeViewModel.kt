@@ -10,8 +10,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import net.agolyakov.tetrisclockble.data.BleDeviceRepository
-import net.agolyakov.tetrisclockble.model.BleDevice
-import net.agolyakov.tetrisclockble.model.toBleDevice
+import net.agolyakov.tetrisclockble.ble.BleDevice
+import net.agolyakov.tetrisclockble.ble.toBleDevice
 import net.agolyakov.tetrisclockble.service.BluetoothAdapterProvider
 import javax.inject.Inject
 

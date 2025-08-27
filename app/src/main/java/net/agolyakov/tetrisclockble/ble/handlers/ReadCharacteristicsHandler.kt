@@ -1,4 +1,4 @@
-package net.agolyakov.tetrisclockble.model
+package net.agolyakov.tetrisclockble.ble.handlers
 
 import android.bluetooth.BluetoothDevice
 import no.nordicsemi.android.ble.data.Data

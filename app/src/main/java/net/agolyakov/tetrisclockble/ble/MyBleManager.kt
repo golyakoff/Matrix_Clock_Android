@@ -1,21 +1,27 @@
-package net.agolyakov.tetrisclockble.model
+package net.agolyakov.tetrisclockble.ble
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
+import net.agolyakov.tetrisclockble.ble.handlers.AutoBrightnessReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.ManualBrightnessReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.OnOffReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.TimeReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.TurnOffAlarmReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.TurnOnAlarmReadCharacteristicHandler
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
 
 class MyBleManager (
     context: Context,
-    val timeReadCharacteristicHandler: McTimeReadCharacteristicHandler,
-    val onOffReadCharacteristicHandler: McOnOffReadCharacteristicHandler,
-    val manualBrightnessReadCharacteristicHandler: McManualBrightnessReadCharacteristicHandler,
-    val autoBrightnessReadCharacteristicHandler: McAutoBrightnessReadCharacteristicHandler,
-    val turnOnAlarmReadCharacteristicHandler: McTurnOnAlarmReadCharacteristicHandler,
-    val turnOffAlarmReadCharacteristicHandler: McTurnOffAlarmReadCharacteristicHandler,
+    val timeReadCharacteristicHandler: TimeReadCharacteristicHandler,
+    val onOffReadCharacteristicHandler: OnOffReadCharacteristicHandler,
+    val manualBrightnessReadCharacteristicHandler: ManualBrightnessReadCharacteristicHandler,
+    val autoBrightnessReadCharacteristicHandler: AutoBrightnessReadCharacteristicHandler,
+    val turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler,
+    val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
 
     )
     : BleManager(context)
@@ -132,7 +138,7 @@ class MyBleManager (
             .enqueue()
     }
 
-    fun setTimeCharacteristic(time: McTime) {
+    fun setTimeCharacteristic(time: TetrisClockTime) {
         writeCharacteristic(
             mcTimeCharacteristic,
             time.toByteArray(),
@@ -164,7 +170,7 @@ class MyBleManager (
         ).enqueue()
     }
 
-    fun setTurnOnAlarmCharacteristic(alarm: McTurnOnOffAlarm) {
+    fun setTurnOnAlarmCharacteristic(alarm: TetrisClockAlarm) {
         writeCharacteristic(
             mcTurnOnAlarmCharacteristic,
             alarm.toByteArray(),
@@ -172,7 +178,7 @@ class MyBleManager (
         ).enqueue()
     }
 
-    fun setTurnOffAlarmCharacteristic(alarm: McTurnOnOffAlarm) {
+    fun setTurnOffAlarmCharacteristic(alarm: TetrisClockAlarm) {
         writeCharacteristic(
             mcTurnOffAlarmCharacteristic,
             alarm.toByteArray(),

@@ -1,9 +1,17 @@
 <resources>
     <string name="app_name">Часы-тетрис</string>
     <string name="app_full_name">Часы-тетрис | Bluetooth LE клиент</string>
-    <string name="mc_turn_on_clock">Включить часы</string>
-    <string name="mc_turn_off_clock">Погасить часы</string>
+    <string name="mc_manual_turn_on_clock">Включить часы</string>
+    <string name="mc_manual_turn_off_clock">Выключить часы</string>
     <string name="mc_manual_brightness">Яркость</string>
     <string name="perm_bluetooth_is_off">Приложение требует включения Bluetooth</string>
     <string name="perm_not_enough_permissions">Приложение не получило необходимых разрешений</string>
+    <string name="mc_time_of_tetris_clock">Время часов</string>
+    <string name="mc_time_of_mobile_phone">Время телефона</string>
+    <string name="mc_action_synchronize_time">Синхронизировать время</string>
+    <string name="mc_action_set_time">Установить время</string>
+    <string name="mc_check_auto_on">Авто ВКЛ</string>
+    <string name="mc_check_auto_off">Авто ВЫКЛ</string>
+    <string name="mc_dialog_ok">OK</string>
+    <string name="mc_dialog_cancel">Отмена</string>
 </resources>

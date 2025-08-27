@@ -1,4 +1,4 @@
-package net.agolyakov.tetrisclockble.model
+package net.agolyakov.tetrisclockble.ble
 
 sealed class BleConnectionState {
     object Connecting : BleConnectionState()
