@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import net.agolyakov.tetrisclockble.ble.BleDevice
 import net.agolyakov.tetrisclockble.screen.DeviceScreen
+import net.agolyakov.tetrisclockble.screen.FirmwareUpdateScreen
 import net.agolyakov.tetrisclockble.screen.HomeScreen
 import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
 
@@ -31,6 +32,12 @@ fun SetupNavGraph(
                 navController.previousBackStackEntry?.savedStateHandle?.get<BleDevice>("device")
 
             DeviceScreen(navController, device)
+        }
+
+        composable(route = "firmware_update") {
+            FirmwareUpdateScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }

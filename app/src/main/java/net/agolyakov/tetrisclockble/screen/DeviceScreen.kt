@@ -130,6 +130,9 @@ fun DeviceScreen(
         },
         turnOffAlarmOnActiveToggle = {
             viewModel.toggleAlarmActive(TetrisClockAlarmType.TURN_OFF)
+        },
+        onFirmwareUpdateButtonClickAction = {
+            navController.navigate("firmware_update")
         }
     )
 }
@@ -154,7 +157,8 @@ fun DeviceSettings (
     turnOnAlarmOnActiveToggle: () -> Unit,
     turnOffAlarm: TetrisClockAlarm,
     turnOffAlarmOnTimeClick: () -> Unit,
-    turnOffAlarmOnActiveToggle: () -> Unit)
+    turnOffAlarmOnActiveToggle: () -> Unit,
+    onFirmwareUpdateButtonClickAction: () -> Unit)
 {
     Box(
         modifier = Modifier
@@ -214,6 +218,10 @@ fun DeviceSettings (
             BrightnessSlider(
                 manualBrightness,
                 onSliderBrightnessValueChanged,
+            )
+
+            FirmwareUpdateButton(
+                onFirmwareUpdateButtonClickAction
             )
         }
     }
@@ -642,6 +650,27 @@ fun AlarmTimeField(
 }
 
 @Composable
+fun FirmwareUpdateButton(
+    onButtonClick: () -> Unit
+) {
+    Button(
+        onClick = onButtonClick,
+        modifier = Modifier.padding(16.dp)
+    ) {
+        Text("Проверить обновления")
+    }
+
+    // Настройки для pre-releases
+    var includePreReleases by remember { mutableStateOf(false) }
+    Switch(
+        checked = includePreReleases,
+        onCheckedChange = { includePreReleases = it },
+        modifier = Modifier.padding(16.dp)
+    )
+    Text("Предлагать предрелизные обновления")
+}
+
+@Composable
 @Preview(
     name = "State 1: Device ON",
     showBackground = true
@@ -680,7 +709,8 @@ fun DeviceSettings_State1_Preview(){
                 hours = 23,
                 minutes = 45),
             turnOffAlarmOnTimeClick = {},
-            turnOffAlarmOnActiveToggle = {}
+            turnOffAlarmOnActiveToggle = {},
+            onFirmwareUpdateButtonClickAction = {}
         )
     }
 }
@@ -723,7 +753,8 @@ fun DeviceSettings_State2_Preview(){
                 hours = 23,
                 minutes = 45),
             turnOffAlarmOnTimeClick = {},
-            turnOffAlarmOnActiveToggle = {}
+            turnOffAlarmOnActiveToggle = {},
+            onFirmwareUpdateButtonClickAction = {}
         )
     }
 }

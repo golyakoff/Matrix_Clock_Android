@@ -27,6 +27,7 @@ import net.agolyakov.tetrisclockble.ble.MyBleManager
 import net.agolyakov.tetrisclockble.ble.TimePickerDialogState
 import net.agolyakov.tetrisclockble.ble.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.RtcTemperatureReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.VersionReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.preferences.DevicePreferences
 import net.agolyakov.tetrisclockble.service.BluetoothAdapterProvider
 import no.nordicsemi.android.ble.observer.ConnectionObserver
@@ -204,6 +205,12 @@ class DeviceViewModel @Inject constructor(
         }
     }
 
+    // Firmware Version
+    private var _firmwareVersion: String = "Unknown"
+    private var _tetrisClockFirmwareVersion = MutableStateFlow(_firmwareVersion)
+    var tetrisClockFirmwareVersion: StateFlow<String> = _tetrisClockFirmwareVersion
+    var firmwareVersionReadCharacteristicHandler = VersionReadCharacteristicHandler(_tetrisClockFirmwareVersion)
+
     private val myBleManager: MyBleManager = MyBleManager(
         context = bluetoothAdapterProvider.getContext(),
         timeReadCharacteristicHandler,
@@ -213,7 +220,8 @@ class DeviceViewModel @Inject constructor(
         turnOnAlarmReadCharacteristicHandler,
         turnOffAlarmReadCharacteristicHandler,
         agingOffsetReadCharacteristicHandler,
-        rtcTemperatureReadCharacteristicHandler)
+        rtcTemperatureReadCharacteristicHandler,
+        firmwareVersionReadCharacteristicHandler)
 
     fun connectToDevice(device: BleDevice?)
     {

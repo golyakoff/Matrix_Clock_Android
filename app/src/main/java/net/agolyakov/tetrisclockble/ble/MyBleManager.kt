@@ -12,6 +12,7 @@ import net.agolyakov.tetrisclockble.ble.handlers.RtcTemperatureReadCharacteristi
 import net.agolyakov.tetrisclockble.ble.handlers.TimeReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.TurnOffAlarmReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.TurnOnAlarmReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.VersionReadCharacteristicHandler
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
@@ -25,7 +26,8 @@ class MyBleManager (
     val turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler,
     val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
     val agingOffsetReadCharacteristicHandler: AgingOffsetReadCharacteristicHandler,
-    val rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler
+    val rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler,
+    val versionReadCharacteristicHandler: VersionReadCharacteristicHandler
     )
     : BleManager(context)
 {
@@ -35,10 +37,11 @@ class MyBleManager (
     private var mcAutoBrightnessCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOnAlarmCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOffAlarmCharacteristic: BluetoothGattCharacteristic? = null
-
     private var mcAgingOffsetCharacteristic: BluetoothGattCharacteristic? = null
-
     private var mcRtcTemperatureCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcVersionCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcOtaControlCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcOtaDataCharacteristic: BluetoothGattCharacteristic? = null
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
         gatt.getService(SERVICE_CONTROL_UUID)?.let { service ->
@@ -50,6 +53,9 @@ class MyBleManager (
             mcTurnOffAlarmCharacteristic = service.getCharacteristic(MC_TURN_OFF_ALARM_CHAR_UUID)
             mcAgingOffsetCharacteristic = service.getCharacteristic(MC_AGING_OFFSET_CHAR_UUID)
             mcRtcTemperatureCharacteristic = service.getCharacteristic(MC_TEMPERATURE_CHAR_UUID)
+            mcVersionCharacteristic = service.getCharacteristic(MC_VERSION_CHAR_UUID)
+            mcOtaControlCharacteristic = service.getCharacteristic(MC_OTA_CONTROL_CHAR_UUID)
+            mcOtaDataCharacteristic = service.getCharacteristic(MC_OTA_DATA_CHAR_UUID)
         }
 
         return mcTimeCharacteristic != null
@@ -58,9 +64,13 @@ class MyBleManager (
                 && mcAutoBrightnessCharacteristic != null
                 && mcTurnOnAlarmCharacteristic != null
                 && mcTurnOffAlarmCharacteristic != null
+
+                // commented for dirty backward compatibility:
                 //&& mcAgingOffsetCharacteristic != null
                 //&& mcRtcTemperatureCharacteristic != null
-
+                //&& mcVersionCharacteristic != null
+                //&& mcOtaControlCharacteristic != null
+                //&& mcOtaDataCharacteristic != null
     }
 
     override fun onServicesInvalidated() {
@@ -72,6 +82,9 @@ class MyBleManager (
         mcTurnOffAlarmCharacteristic = null
         mcAgingOffsetCharacteristic = null
         mcRtcTemperatureCharacteristic = null
+        mcVersionCharacteristic = null
+        mcOtaControlCharacteristic = null
+        mcOtaDataCharacteristic = null
     }
 
     override fun initialize() {
@@ -90,6 +103,14 @@ class MyBleManager (
                     data!!)
             }
         enableNotifications(mcOnOffCharacteristic).enqueue()
+
+        setNotificationCallback(mcVersionCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                versionReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+        enableNotifications(mcVersionCharacteristic).enqueue()
     }
 
     fun getTimeCharacteristic() {
@@ -172,6 +193,16 @@ class MyBleManager (
             .enqueue()
     }
 
+    fun getVersionCharacteristic() {
+        readCharacteristic(mcVersionCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                versionReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+            .enqueue()
+    }
+
     fun setTimeCharacteristic(time: TetrisClockTime) {
         writeCharacteristic(
             mcTimeCharacteristic,
@@ -235,6 +266,29 @@ class MyBleManager (
         ).enqueue()
     }
 
+    fun setOtaControlCharacteristic(command: ByteArray, callback: (Boolean) -> Unit) {
+        writeCharacteristic(
+            mcOtaControlCharacteristic,
+            command,
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).with { device, data ->
+            callback(true)
+        }.fail { device, status ->
+            callback(false)
+        }.enqueue()
+    }
+
+    fun setOtaDataCharacteristic(data: ByteArray, callback: (Boolean) -> Unit) {
+        writeCharacteristic(
+            mcOtaDataCharacteristic,
+            data,
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).with { device, data ->
+            callback(true)
+        }.fail { device, status ->
+            callback(false)
+        }.enqueue()
+    }
 
     companion object {
         // Matrix Clock Service
@@ -284,5 +338,28 @@ class MyBleManager (
         // Mode: Read
         val MC_TEMPERATURE_CHAR_UUID: UUID = UUID.fromString("13BE1932-508D-4BEB-AFBC-2C21D1397920")
 
+        // BLE Device firmware version
+        // M Read, Notify
+        val MC_VERSION_CHAR_UUID: UUID = UUID.fromString("BEB5483E-36E1-4688-B7F5-EA07361B26A0")
+
+        // BLE Device OTA update process control point
+        // M Write
+        val MC_OTA_CONTROL_CHAR_UUID: UUID = UUID.fromString("BEB5483E-36E1-4688-B7F5-EA07361B26A1")
+
+        // BLE Device OTA update data upload point (to the secondary partition)
+        // M Write
+        val MC_OTA_DATA_CHAR_UUID: UUID = UUID.fromString("BEB5483E-36E1-4688-B7F5-EA07361B26A2")
+
+        // OTA Control Commands
+        const val OTA_CMD_START: Byte = 0x01
+        const val OTA_CMD_END: Byte = 0x02
+        const val OTA_CMD_SWITCH_REBOOT: Byte = 0x03
+        const val OTA_CMD_ABORT: Byte = 0x04
+        const val OTA_CMD_GET_STATUS: Byte = 0x05
+
+        // OTA Status Responses
+        const val OTA_STATUS_OK: Byte = 0x00
+        const val OTA_STATUS_ERROR: Byte = 0x01
+        const val OTA_STATUS_BUSY: Byte = 0x02
     }
 }
