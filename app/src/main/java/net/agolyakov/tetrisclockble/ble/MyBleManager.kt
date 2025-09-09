@@ -4,9 +4,11 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
+import net.agolyakov.tetrisclockble.ble.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.AutoBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.OnOffReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.RtcTemperatureReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.TimeReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.TurnOffAlarmReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.TurnOnAlarmReadCharacteristicHandler
@@ -22,7 +24,8 @@ class MyBleManager (
     val autoBrightnessReadCharacteristicHandler: AutoBrightnessReadCharacteristicHandler,
     val turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler,
     val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
-
+    val agingOffsetReadCharacteristicHandler: AgingOffsetReadCharacteristicHandler,
+    val rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler
     )
     : BleManager(context)
 {
@@ -33,6 +36,10 @@ class MyBleManager (
     private var mcTurnOnAlarmCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOffAlarmCharacteristic: BluetoothGattCharacteristic? = null
 
+    private var mcAgingOffsetCharacteristic: BluetoothGattCharacteristic? = null
+
+    private var mcRtcTemperatureCharacteristic: BluetoothGattCharacteristic? = null
+
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
         gatt.getService(SERVICE_CONTROL_UUID)?.let { service ->
             mcTimeCharacteristic = service.getCharacteristic(MC_TIME_CHAR_UUID)
@@ -41,6 +48,8 @@ class MyBleManager (
             mcAutoBrightnessCharacteristic = service.getCharacteristic(MC_AUTO_BRIGHT_ENABLE_CHAR_UUID)
             mcTurnOnAlarmCharacteristic = service.getCharacteristic(MC_TURN_ON_ALARM_CHAR_UUID)
             mcTurnOffAlarmCharacteristic = service.getCharacteristic(MC_TURN_OFF_ALARM_CHAR_UUID)
+            mcAgingOffsetCharacteristic = service.getCharacteristic(MC_AGING_OFFSET_CHAR_UUID)
+            mcRtcTemperatureCharacteristic = service.getCharacteristic(MC_TEMPERATURE_CHAR_UUID)
         }
 
         return mcTimeCharacteristic != null
@@ -49,6 +58,9 @@ class MyBleManager (
                 && mcAutoBrightnessCharacteristic != null
                 && mcTurnOnAlarmCharacteristic != null
                 && mcTurnOffAlarmCharacteristic != null
+                //&& mcAgingOffsetCharacteristic != null
+                //&& mcRtcTemperatureCharacteristic != null
+
     }
 
     override fun onServicesInvalidated() {
@@ -58,6 +70,8 @@ class MyBleManager (
         mcAutoBrightnessCharacteristic = null
         mcTurnOnAlarmCharacteristic = null
         mcTurnOffAlarmCharacteristic = null
+        mcAgingOffsetCharacteristic = null
+        mcRtcTemperatureCharacteristic = null
     }
 
     override fun initialize() {
@@ -138,6 +152,26 @@ class MyBleManager (
             .enqueue()
     }
 
+    fun getAgingOffsetCharacteristic() {
+        readCharacteristic(mcAgingOffsetCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                agingOffsetReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+            .enqueue()
+    }
+
+    fun getRtcTemperatureCharacteristic() {
+        readCharacteristic(mcRtcTemperatureCharacteristic)
+            .with { device: BluetoothDevice?, data: Data? ->
+                rtcTemperatureReadCharacteristicHandler.onReadCharacteristicCallback(
+                    device!!,
+                    data!!)
+            }
+            .enqueue()
+    }
+
     fun setTimeCharacteristic(time: TetrisClockTime) {
         writeCharacteristic(
             mcTimeCharacteristic,
@@ -186,6 +220,22 @@ class MyBleManager (
         ).enqueue()
     }
 
+    fun setAgingOffsetCharacteristic(agingOffset: Int) {
+        val lower8Bits = agingOffset and 0xFF
+        val data = if (lower8Bits and 0x80 != 0) {
+            (lower8Bits - 256).toByte()
+        } else {
+            lower8Bits.toByte()
+        }
+
+        writeCharacteristic(
+            mcAgingOffsetCharacteristic,
+            byteArrayOf(data),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
+    }
+
+
     companion object {
         // Matrix Clock Service
         val SERVICE_CONTROL_UUID: UUID = UUID.fromString("5DE498A1-E7A6-4F4A-B323-913741895AD0")
@@ -221,10 +271,18 @@ class MyBleManager (
         // Mode: Read, Write, Notify
         val MC_TIME_CHAR_UUID: UUID = UUID.fromString("D5BD8D18-BD9A-4EF4-B206-8C78FFBE2774")
 
-
         // MatrixClock time in formatted string "YYYY.MM.DD HH:mm:ss", example: "2023.12.31 09:05:42"
         // Time is in local time zone (not UTC, no time zone specified).
         // Mode: Read, Notify
         // val MC_TIME_STR_CHAR_UUID: UUID = UUID.fromString("AA063B0F-DB36-47D0-8F19-A70FA97D86DF")
+
+        // Control point to setup aging offset value (8-bit signed integer)
+        // Mode: Read, Write
+        val MC_AGING_OFFSET_CHAR_UUID: UUID = UUID.fromString("F89E201D-434F-4675-B60E-2CF682200C50")
+
+        // RTC chip temperature formatted string "-XX.YY C" with the 0.25 degree precision
+        // Mode: Read
+        val MC_TEMPERATURE_CHAR_UUID: UUID = UUID.fromString("13BE1932-508D-4BEB-AFBC-2C21D1397920")
+
     }
 }

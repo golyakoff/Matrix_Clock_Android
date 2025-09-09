@@ -25,6 +25,8 @@ import net.agolyakov.tetrisclockble.ble.handlers.TurnOnAlarmReadCharacteristicHa
 import net.agolyakov.tetrisclockble.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.ble.MyBleManager
 import net.agolyakov.tetrisclockble.ble.TimePickerDialogState
+import net.agolyakov.tetrisclockble.ble.handlers.AgingOffsetReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.ble.handlers.RtcTemperatureReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.preferences.DevicePreferences
 import net.agolyakov.tetrisclockble.service.BluetoothAdapterProvider
 import no.nordicsemi.android.ble.observer.ConnectionObserver
@@ -79,45 +81,45 @@ class DeviceViewModel @Inject constructor(
 
     // Time
     private var _bleDeviceTime: TetrisClockTime = TetrisClockTime()
-    private var _matrixClockBleDeviceTime = MutableStateFlow(_bleDeviceTime)
-    var matrixClockBleDeviceTime: StateFlow<TetrisClockTime> = _matrixClockBleDeviceTime
-    var timeReadCharacteristicHandler = TimeReadCharacteristicHandler(_matrixClockBleDeviceTime)
+    private var _tetrisClockBleDeviceTime = MutableStateFlow(_bleDeviceTime)
+    var tetrisClockBleDeviceTime: StateFlow<TetrisClockTime> = _tetrisClockBleDeviceTime
+    var timeReadCharacteristicHandler = TimeReadCharacteristicHandler(_tetrisClockBleDeviceTime)
 
     // ON/OFF
     private var _onOffState: Boolean = true
-    private var _matrixClockIsOn = MutableStateFlow(_onOffState)
-    val matrixClockIsOn: StateFlow<Boolean> = _matrixClockIsOn
+    private var _tetrisClockIsOn = MutableStateFlow(_onOffState)
+    val tetrisClockTetrisOn: StateFlow<Boolean> = _tetrisClockIsOn
     var onOffReadCharacteristicHandler = OnOffReadCharacteristicHandler(
-        _matrixClockIsOn)
+        _tetrisClockIsOn)
 
 
     // Manual Brightness
     private var _manualBrightnessState: Byte = 0
-    private var _matrixClockManualBrightness = MutableStateFlow(_manualBrightnessState)
+    private var _tetrisClockManualBrightness = MutableStateFlow(_manualBrightnessState)
     private val _debouncedBrightness = MutableSharedFlow<Byte>(extraBufferCapacity = 1)
-    val matrixClockManualBrightness : StateFlow<Byte> = _matrixClockManualBrightness
+    val tetrisClockManualBrightness : StateFlow<Byte> = _tetrisClockManualBrightness
     var manualBrightnessReadCharacteristicHandler = ManualBrightnessReadCharacteristicHandler(
-        _matrixClockManualBrightness)
+        _tetrisClockManualBrightness)
 
     // Is Automatic Brightness Mode
     private var _isAutoBrightness: Boolean = false
-    private var _matrixClockIsAutoBrightness = MutableStateFlow(_isAutoBrightness)
-    val matrixClockIsAutoBrightness: StateFlow<Boolean> = _matrixClockIsAutoBrightness
+    private var _tetrisClockIsAutoBrightness = MutableStateFlow(_isAutoBrightness)
+    val tetrisClockIsAutoBrightness: StateFlow<Boolean> = _tetrisClockIsAutoBrightness
     var autoBrightnessReadCharacteristicHandler = AutoBrightnessReadCharacteristicHandler(
-        _matrixClockIsAutoBrightness)
+        _tetrisClockIsAutoBrightness)
 
     // Turn ON Alarm
     private var _turnOnAlarm: TetrisClockAlarm = TetrisClockAlarm()
-    private var _matrixClockTurnOnAlarm = MutableStateFlow(_turnOnAlarm)
-    var matrixClockTurnOnAlarm: StateFlow<TetrisClockAlarm> = _matrixClockTurnOnAlarm
-    var turnOnAlarmReadCharacteristicHandler = TurnOnAlarmReadCharacteristicHandler(_matrixClockTurnOnAlarm)
+    private var _tetrisClockTurnOnAlarm = MutableStateFlow(_turnOnAlarm)
+    var tetrisClockTurnOnAlarm: StateFlow<TetrisClockAlarm> = _tetrisClockTurnOnAlarm
+    var turnOnAlarmReadCharacteristicHandler = TurnOnAlarmReadCharacteristicHandler(_tetrisClockTurnOnAlarm)
 
     // Turn OFF Alarm
     private var _turnOffAlarm: TetrisClockAlarm = TetrisClockAlarm()
-    private var _matrixClockTurnOffAlarm = MutableStateFlow(_turnOffAlarm)
-    var matrixClockTurnOffAlarm: StateFlow<TetrisClockAlarm> = _matrixClockTurnOffAlarm
+    private var _tetrisClockTurnOffAlarm = MutableStateFlow(_turnOffAlarm)
+    var tetrisClockTurnOffAlarm: StateFlow<TetrisClockAlarm> = _tetrisClockTurnOffAlarm
     var turnOffAlarmReadCharacteristicHandler =
-        TurnOffAlarmReadCharacteristicHandler(_matrixClockTurnOffAlarm)
+        TurnOffAlarmReadCharacteristicHandler(_tetrisClockTurnOffAlarm)
 
     // Alarm Dialog
     private val _timePickerState = MutableStateFlow(TimePickerDialogState())
@@ -158,19 +160,34 @@ class DeviceViewModel @Inject constructor(
     fun toggleAlarmActive(alarmType: TetrisClockAlarmType) {
         when (alarmType) {
             TetrisClockAlarmType.TURN_ON -> {
-                val current = _matrixClockTurnOnAlarm.value
+                val current = _tetrisClockTurnOnAlarm.value
                 val newAlarm = current.copy(isActive = !current.isActive)
-                _matrixClockTurnOnAlarm.value = newAlarm
-                // bleRepository.writeTurnOnAlarm(newAlarm.toByteArray())
+                _tetrisClockTurnOnAlarm.value = newAlarm
+                myBleManager.setTurnOffAlarmCharacteristic(newAlarm)
             }
             TetrisClockAlarmType.TURN_OFF -> {
-                val current = _matrixClockTurnOffAlarm.value
+                val current = _tetrisClockTurnOffAlarm.value
                 val newAlarm = current.copy(isActive = !current.isActive)
-                _matrixClockTurnOffAlarm.value = newAlarm
-                // bleRepository.writeTurnOffAlarm(newAlarm.toByteArray())
+                _tetrisClockTurnOffAlarm.value = newAlarm
+                myBleManager.setTurnOffAlarmCharacteristic(newAlarm)
             }
         }
     }
+
+    // RTC Aging Offset
+    private var _agingOffsetState: Int = 0
+    private var _tetrisClockAgingOffset  = MutableStateFlow(_agingOffsetState)
+    val tetrisClockAgingOffset : StateFlow<Int> = _tetrisClockAgingOffset
+    var agingOffsetReadCharacteristicHandler = AgingOffsetReadCharacteristicHandler(
+        _tetrisClockAgingOffset)
+
+
+    // RTC Temperature
+    private var _rtcTemperatureState: Float = Float.NaN
+    private var _tetrisClockRtcTemperature  = MutableStateFlow(_rtcTemperatureState)
+    val tetrisClockRtcTemperature : StateFlow<Float> = _tetrisClockRtcTemperature
+    var rtcTemperatureReadCharacteristicHandler = RtcTemperatureReadCharacteristicHandler(
+        _tetrisClockRtcTemperature)
 
     init {
         val deviceFromNav = savedStateHandle.get<BleDevice>("device")
@@ -194,7 +211,9 @@ class DeviceViewModel @Inject constructor(
         manualBrightnessReadCharacteristicHandler,
         autoBrightnessReadCharacteristicHandler,
         turnOnAlarmReadCharacteristicHandler,
-        turnOffAlarmReadCharacteristicHandler)
+        turnOffAlarmReadCharacteristicHandler,
+        agingOffsetReadCharacteristicHandler,
+        rtcTemperatureReadCharacteristicHandler)
 
     fun connectToDevice(device: BleDevice?)
     {
@@ -224,7 +243,7 @@ class DeviceViewModel @Inject constructor(
 
     fun setTimeCharacteristic(time: LocalDateTime) {
         _bleDeviceTime = TetrisClockTime(time)
-        _matrixClockBleDeviceTime.value = _bleDeviceTime
+        _tetrisClockBleDeviceTime.value = _bleDeviceTime
 
         if (myBleManager.isReady)
         {
@@ -233,10 +252,10 @@ class DeviceViewModel @Inject constructor(
     }
 
     fun toggleOnOffCharacteristic() {
-        val on = !_matrixClockIsOn.value
+        val on = !_tetrisClockIsOn.value
 
         _onOffState = on
-        _matrixClockIsOn.value = on
+        _tetrisClockIsOn.value = on
 
         if (myBleManager.isReady) {
             myBleManager.setOnOffCharacteristic(on)
@@ -245,15 +264,24 @@ class DeviceViewModel @Inject constructor(
 
     fun setManualBrightnessCharacteristic(brightness: Byte) {
         _manualBrightnessState = brightness
-        _matrixClockManualBrightness.value = brightness
+        _tetrisClockManualBrightness.value = brightness
         _debouncedBrightness.tryEmit(brightness)
     }
 
+    fun setAgingOffsetCharacteristic(agingOffset: Int) {
+        _agingOffsetState = agingOffset
+        _tetrisClockAgingOffset.value = agingOffset
+
+        if (myBleManager.isReady) {
+            myBleManager.setAgingOffsetCharacteristic(agingOffset)
+        }
+    }
+
     fun toggleAutoBrightnessCharacteristic() {
-        val isAuto = !_matrixClockIsAutoBrightness.value
+        val isAuto = !_tetrisClockIsAutoBrightness.value
 
         _isAutoBrightness = isAuto
-        _matrixClockIsAutoBrightness.value = isAuto
+        _tetrisClockIsAutoBrightness.value = isAuto
 
         if (myBleManager.isReady) {
             myBleManager.setAutoBrightnessCharacteristic(isAuto)
@@ -262,7 +290,7 @@ class DeviceViewModel @Inject constructor(
 
     fun setTurnOnAlarmCharacteristic(isActive: Boolean, hours: Byte, minutes: Byte) {
         _turnOnAlarm = TetrisClockAlarm(isActive, hours, minutes)
-        _matrixClockTurnOnAlarm.value = _turnOnAlarm
+        _tetrisClockTurnOnAlarm.value = _turnOnAlarm
 
         if (myBleManager.isReady)
         {
@@ -272,7 +300,7 @@ class DeviceViewModel @Inject constructor(
 
     fun setTurnOffAlarmCharacteristic(isActive: Boolean, hours: Byte, minutes: Byte) {
         _turnOffAlarm = TetrisClockAlarm(isActive, hours, minutes)
-        _matrixClockTurnOffAlarm.value = _turnOffAlarm
+        _tetrisClockTurnOffAlarm.value = _turnOffAlarm
 
         if (myBleManager.isReady)
         {
@@ -284,7 +312,7 @@ class DeviceViewModel @Inject constructor(
         val mcNow = TetrisClockTime.now()
         myBleManager.setTimeCharacteristic(mcNow)
         _bleDeviceTime = mcNow
-        _matrixClockBleDeviceTime.value = mcNow
+        _tetrisClockBleDeviceTime.value = mcNow
     }
 
     private val connectionObserver = object : ConnectionObserver {
@@ -301,6 +329,8 @@ class DeviceViewModel @Inject constructor(
             myBleManager.getAutoBrightnessCharacteristic()
             myBleManager.getTurnOnAlarmCharacteristic()
             myBleManager.getTurnOffAlarmCharacteristic()
+            myBleManager.getAgingOffsetCharacteristic()
+            myBleManager.getRtcTemperatureCharacteristic()
         }
 
         override fun onDeviceDisconnecting(device: BluetoothDevice) {}

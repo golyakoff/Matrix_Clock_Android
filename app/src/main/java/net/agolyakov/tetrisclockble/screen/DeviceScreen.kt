@@ -16,13 +16,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -41,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -63,13 +66,15 @@ fun DeviceScreen(
     device: BleDevice?,
 ) {
     val viewModel: DeviceViewModel = hiltViewModel()
-    val isOn: Boolean by viewModel.matrixClockIsOn.collectAsState()
-    val manualBrightness: Byte by viewModel.matrixClockManualBrightness.collectAsState()
-    val bleTime: TetrisClockTime by viewModel.matrixClockBleDeviceTime.collectAsState()
+    val isOn: Boolean by viewModel.tetrisClockTetrisOn.collectAsState()
+    val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
+    val bleTime: TetrisClockTime by viewModel.tetrisClockBleDeviceTime.collectAsState()
     var phoneTime: TetrisClockTime by remember { mutableStateOf(TetrisClockTime.now()) }
     val timePickerState: TimePickerDialogState by viewModel.timePickerState.collectAsState()
-    val turnOnAlarm: TetrisClockAlarm by viewModel.matrixClockTurnOnAlarm.collectAsState()
-    val turnOffAlarm: TetrisClockAlarm by viewModel.matrixClockTurnOffAlarm.collectAsState()
+    val turnOnAlarm: TetrisClockAlarm by viewModel.tetrisClockTurnOnAlarm.collectAsState()
+    val turnOffAlarm: TetrisClockAlarm by viewModel.tetrisClockTurnOffAlarm.collectAsState()
+    val agingOffset: Int by viewModel.tetrisClockAgingOffset.collectAsState()
+    val rtcTemperature: Float by viewModel.tetrisClockRtcTemperature.collectAsState()
 
     if (timePickerState.isVisible) {
         TimePickerDialog(
@@ -109,6 +114,11 @@ fun DeviceScreen(
         bleTime = bleTime,
         phoneTime = phoneTime,
         onButtonSyncClickAction = { viewModel.syncBleWithPhone() },
+        agingOffset = agingOffset,
+        onSpinnerAgingOffsetValueChanged = {
+            newValue -> viewModel.setAgingOffsetCharacteristic(newValue)
+        },
+        rtcTemperature = rtcTemperature,
         turnOnAlarm = turnOnAlarm,
         turnOnAlarmOnTimeClick = {
             viewModel.showTimePickerDialog(TetrisClockAlarmType.TURN_ON, turnOnAlarm) },
@@ -136,6 +146,9 @@ fun DeviceSettings (
     bleTime: TetrisClockTime,
     phoneTime: TetrisClockTime,
     onButtonSyncClickAction: () -> Unit,
+    agingOffset: Int,
+    onSpinnerAgingOffsetValueChanged: (Int) -> Unit,
+    rtcTemperature: Float,
     turnOnAlarm: TetrisClockAlarm,
     turnOnAlarmOnTimeClick: () -> Unit,
     turnOnAlarmOnActiveToggle: () -> Unit,
@@ -167,7 +180,18 @@ fun DeviceSettings (
                 onButtonSyncClickAction,
             )
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(10.dp))
+
+            AgingOffsetSpinner(
+                agingOffset,
+                onSpinnerAgingOffsetValueChanged
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            RtcTemperature(rtcTemperature)
+
+            Spacer(Modifier.height(30.dp))
 
             OnOffAlarms(
                 turnOnAlarm,
@@ -185,7 +209,7 @@ fun DeviceSettings (
                 onButtonOnOffClickAction,
             )
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(30.dp))
 
             BrightnessSlider(
                 manualBrightness,
@@ -287,6 +311,89 @@ fun BrightnessSlider(
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
 
+    )
+}
+
+@Composable
+fun AgingOffsetSpinner(
+    currentValue: Int,
+    onSpinnerAgingOffsetValueChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+       Box(
+            modifier = Modifier
+                .clickable { showDialog = true }
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                    text = "${stringResource(R.string.mc_aging_offset)}: ${if (currentValue > 0) "+" else ""
+                    }${ "%.2f".format(currentValue * 0.1)} ${stringResource(R.string.mc_ppm)}",
+           style = MaterialTheme.typography.bodyLarge,
+           color = MaterialTheme.colorScheme.primary
+           )
+        }
+    }
+
+    // Диалог для ручного ввода
+    if (showDialog) {
+        var inputValue by remember(currentValue) { mutableStateOf(currentValue.toString()) }
+
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(stringResource( R.string.mc_dialog_set_aging_offset)) },
+            text = {
+                Column()
+                {
+                    Text(text = stringResource(R.string.mc_dialog_agin_offset_tip1))
+
+                    Spacer(Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = inputValue,
+                        onValueChange = {
+                            inputValue = it.filter { char -> char.isDigit() || char == '-' }
+                        },
+                        label = { Text("Значение от -128 до 127") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val newValue = inputValue.toIntOrNull()?.coerceIn(-128..127)
+                        newValue?.let { onSpinnerAgingOffsetValueChanged(it) }
+                        showDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.mc_dialog_ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(stringResource(R.string.mc_dialog_cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun RtcTemperature(
+    rtcTemperature: Float
+) {
+    Text(
+        text = "${stringResource(R.string.mc_rtc_temperature)}: ${if (rtcTemperature > 0) "+" else ""
+        }${"%.2f".format(rtcTemperature)} ${stringResource(R.string.mc_degrees_celsius)}",
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -525,7 +632,7 @@ fun AlarmTimeField(
             )
 
             Icon(
-                imageVector = Icons.Default.DateRange,
+                imageVector = Icons.Default.Timelapse,
                 contentDescription = stringResource(R.string.mc_action_set_time),
                 tint = if (isActive) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
@@ -559,6 +666,9 @@ fun DeviceSettings_State1_Preview(){
             ),
             phoneTime = TetrisClockTime(LocalDateTime.now()),
             onButtonOnOffClickAction = {},
+            agingOffset = 5,
+            onSpinnerAgingOffsetValueChanged = {},
+            rtcTemperature = 21.25F,
             turnOnAlarm = TetrisClockAlarm(
                 isActive = true,
                 hours = 6,
@@ -599,6 +709,9 @@ fun DeviceSettings_State2_Preview(){
             ),
             phoneTime = TetrisClockTime(LocalDateTime.now()),
             onButtonOnOffClickAction = {},
+            agingOffset = -108,
+            onSpinnerAgingOffsetValueChanged = {},
+            rtcTemperature = -10.25F,
             turnOnAlarm = TetrisClockAlarm(
                 isActive = false,
                 hours = 6,
