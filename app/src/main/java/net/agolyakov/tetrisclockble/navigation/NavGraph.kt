@@ -6,11 +6,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import net.agolyakov.tetrisclockble.ble.BleDevice
-import net.agolyakov.tetrisclockble.screen.DeviceScreen
-import net.agolyakov.tetrisclockble.screen.FirmwareUpdateScreen
-import net.agolyakov.tetrisclockble.screen.HomeScreen
-import net.agolyakov.tetrisclockble.viewmodel.HomeViewModel
+import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
+import net.agolyakov.tetrisclockble.ui.screen.device.DeviceScreen
+import net.agolyakov.tetrisclockble.ui.screen.firmware.FirmwareUpdateScreen
+import net.agolyakov.tetrisclockble.ui.screen.home.HomeScreen
+import net.agolyakov.tetrisclockble.ui.screen.home.HomeViewModel
 
 @Composable
 fun SetupNavGraph(
@@ -28,8 +28,8 @@ fun SetupNavGraph(
         }
 
         composable(route = Screen.Device.route) {
-            val device: BleDevice? =
-                navController.previousBackStackEntry?.savedStateHandle?.get<BleDevice>("device")
+            val device: TetrisClockDevice? =
+                navController.previousBackStackEntry?.savedStateHandle?.get<TetrisClockDevice>("device")
 
             DeviceScreen(navController, device)
         }

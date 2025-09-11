@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import net.agolyakov.tetrisclockble.navigation.SetupNavGraph
-import net.agolyakov.tetrisclockble.screen.MyRequestPermission
+import net.agolyakov.tetrisclockble.ui.viewmodel.MyRequestPermission
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
 
 @AndroidEntryPoint
