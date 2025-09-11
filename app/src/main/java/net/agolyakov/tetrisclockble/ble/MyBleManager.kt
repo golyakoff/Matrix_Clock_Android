@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import net.agolyakov.tetrisclockble.ble.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.AutoBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.ble.handlers.ManualBrightnessReadCharacteristicHandler
@@ -16,21 +17,21 @@ import net.agolyakov.tetrisclockble.ble.handlers.VersionReadCharacteristicHandle
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
+import javax.inject.Inject
 
-class MyBleManager (
-    context: Context,
-    val timeReadCharacteristicHandler: TimeReadCharacteristicHandler,
-    val onOffReadCharacteristicHandler: OnOffReadCharacteristicHandler,
-    val manualBrightnessReadCharacteristicHandler: ManualBrightnessReadCharacteristicHandler,
-    val autoBrightnessReadCharacteristicHandler: AutoBrightnessReadCharacteristicHandler,
-    val turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler,
-    val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
-    val agingOffsetReadCharacteristicHandler: AgingOffsetReadCharacteristicHandler,
-    val rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler,
-    val versionReadCharacteristicHandler: VersionReadCharacteristicHandler
-    )
-    : BleManager(context)
-{
+class MyBleManager @Inject constructor(
+    @ApplicationContext context: Context
+) : BleManager(context) {
+    private var timeReadCharacteristicHandler: TimeReadCharacteristicHandler? = null
+    private var onOffReadCharacteristicHandler: OnOffReadCharacteristicHandler? = null
+    private var manualBrightnessReadCharacteristicHandler: ManualBrightnessReadCharacteristicHandler? = null
+    private var autoBrightnessReadCharacteristicHandler: AutoBrightnessReadCharacteristicHandler? = null
+    private var turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler? = null
+    private var turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler? = null
+    private var agingOffsetReadCharacteristicHandler: AgingOffsetReadCharacteristicHandler? = null
+    private var rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler? = null
+    private var versionReadCharacteristicHandler: VersionReadCharacteristicHandler? = null
+
     private var mcTimeCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOnOffCharacteristic: BluetoothGattCharacteristic? = null
     private var mcManualBrightValueCharacteristic: BluetoothGattCharacteristic? = null
@@ -42,6 +43,31 @@ class MyBleManager (
     private var mcVersionCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOtaControlCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOtaDataCharacteristic: BluetoothGattCharacteristic? = null
+
+    private var isInitialized = false
+    private val pendingHandlers = mutableListOf<() -> Unit>()
+
+    fun setHandlers(
+        timeHandler: TimeReadCharacteristicHandler,
+        onOffHandler: OnOffReadCharacteristicHandler,
+        manualBrightnessHandler: ManualBrightnessReadCharacteristicHandler,
+        autoBrightnessHandler: AutoBrightnessReadCharacteristicHandler,
+        turnOnAlarmHandler: TurnOnAlarmReadCharacteristicHandler,
+        turnOffAlarmHandler: TurnOffAlarmReadCharacteristicHandler,
+        agingOffsetHandler: AgingOffsetReadCharacteristicHandler,
+        rtcTemperatureHandler: RtcTemperatureReadCharacteristicHandler,
+        versionHandler: VersionReadCharacteristicHandler
+    ) {
+        this.timeReadCharacteristicHandler = timeHandler
+        this.onOffReadCharacteristicHandler = onOffHandler
+        this.manualBrightnessReadCharacteristicHandler = manualBrightnessHandler
+        this.autoBrightnessReadCharacteristicHandler = autoBrightnessHandler
+        this.turnOnAlarmReadCharacteristicHandler = turnOnAlarmHandler
+        this.turnOffAlarmReadCharacteristicHandler = turnOffAlarmHandler
+        this.agingOffsetReadCharacteristicHandler = agingOffsetHandler
+        this.rtcTemperatureReadCharacteristicHandler = rtcTemperatureHandler
+        this.versionReadCharacteristicHandler = versionHandler
+    }
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
         gatt.getService(SERVICE_CONTROL_UUID)?.let { service ->
@@ -88,119 +114,169 @@ class MyBleManager (
     }
 
     override fun initialize() {
-        setNotificationCallback(mcTimeCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                timeReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-        enableNotifications(mcTimeCharacteristic).enqueue()
+        isInitialized = true
+        // Если handlers уже установлены, настраиваем уведомления
+        if (timeReadCharacteristicHandler != null &&
+            versionReadCharacteristicHandler != null &&
+            onOffReadCharacteristicHandler != null)
+        {
+            setupNotifications()
+        }
+    }
 
-        setNotificationCallback(mcOnOffCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                onOffReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-        enableNotifications(mcOnOffCharacteristic).enqueue()
+    private fun setupNotifications() {
+        // Time characteristic notifications
+        timeReadCharacteristicHandler?.let {
+            setNotificationCallback(mcTimeCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+            enableNotifications(mcTimeCharacteristic).enqueue()
+        }
 
-        setNotificationCallback(mcVersionCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                versionReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-        enableNotifications(mcVersionCharacteristic).enqueue()
+        // On/Off characteristic notifications
+        onOffReadCharacteristicHandler?.let {
+            setNotificationCallback(mcOnOffCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+            enableNotifications(mcOnOffCharacteristic).enqueue()
+        }
+
+        // Version characteristic notifications
+        versionReadCharacteristicHandler?.let {
+            setNotificationCallback(mcVersionCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+            enableNotifications(mcVersionCharacteristic).enqueue()
+        }
     }
 
     fun getTimeCharacteristic() {
-        readCharacteristic(mcTimeCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                timeReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        timeReadCharacteristicHandler?.let {
+            readCharacteristic(mcTimeCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getOnOffCharacteristic() {
-        readCharacteristic(mcOnOffCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                onOffReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        onOffReadCharacteristicHandler?.let {
+            readCharacteristic(mcOnOffCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getManualBrightnessCharacteristic() {
-        readCharacteristic(mcManualBrightValueCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                manualBrightnessReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        manualBrightnessReadCharacteristicHandler?.let {
+            readCharacteristic(mcManualBrightValueCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getAutoBrightnessCharacteristic() {
-        readCharacteristic(mcAutoBrightnessCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                autoBrightnessReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        autoBrightnessReadCharacteristicHandler?.let {
+            readCharacteristic(mcAutoBrightnessCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getTurnOnAlarmCharacteristic() {
-        readCharacteristic(mcTurnOnAlarmCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                turnOnAlarmReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        turnOnAlarmReadCharacteristicHandler?.let {
+            readCharacteristic(mcTurnOnAlarmCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getTurnOffAlarmCharacteristic() {
-        readCharacteristic(mcTurnOffAlarmCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                turnOffAlarmReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        turnOffAlarmReadCharacteristicHandler?.let {
+            readCharacteristic(mcTurnOffAlarmCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getAgingOffsetCharacteristic() {
-        readCharacteristic(mcAgingOffsetCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                agingOffsetReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        agingOffsetReadCharacteristicHandler?.let {
+            readCharacteristic(mcAgingOffsetCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getRtcTemperatureCharacteristic() {
-        readCharacteristic(mcRtcTemperatureCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                rtcTemperatureReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        rtcTemperatureReadCharacteristicHandler?.let {
+            readCharacteristic(mcRtcTemperatureCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun getVersionCharacteristic() {
-        readCharacteristic(mcVersionCharacteristic)
-            .with { device: BluetoothDevice?, data: Data? ->
-                versionReadCharacteristicHandler.onReadCharacteristicCallback(
-                    device!!,
-                    data!!)
-            }
-            .enqueue()
+        versionReadCharacteristicHandler?.let {
+            readCharacteristic(mcVersionCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
     }
 
     fun setTimeCharacteristic(time: TetrisClockTime) {
