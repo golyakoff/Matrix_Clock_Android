@@ -9,13 +9,12 @@ import dagger.hilt.components.SingletonComponent
 import net.agolyakov.tetrisclockble.data.local.TetrisClockPreferences
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
 import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
-import net.agolyakov.tetrisclockble.data.repository.GitHubRepository
+import net.agolyakov.tetrisclockble.data.repository.GithubRepository
 import net.agolyakov.tetrisclockble.domain.repository.PreferencesRepository
 import net.agolyakov.tetrisclockble.domain.usecase.LoadDeviceWithNameUseCase
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothAdapterProvider
-import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
-import net.agolyakov.tetrisclockble.data.remote.api.GitHubApiService
+import net.agolyakov.tetrisclockble.data.remote.api.GithubApiService
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -41,6 +40,7 @@ object MainModule {
     @Provides
     @Singleton
     fun provideBluetoothService(
+        @ApplicationContext context: Context,
         bluetoothAdapterProvider: BluetoothAdapterProvider
     ): BluetoothService = BluetoothService(bluetoothAdapterProvider)
 
@@ -56,30 +56,6 @@ object MainModule {
     fun providePreferencesRepository(
         preferences: TetrisClockPreferences
     ): PreferencesRepository = preferences
-
-    // Region: Repositories
-    @Provides
-    @Singleton
-    fun provideDeviceRepository(): DeviceRepository = DeviceRepository()
-
-    @Provides
-    @Singleton
-    fun provideFirmwareRepository(
-        bluetoothService: BluetoothService
-    ): FirmwareRepository = FirmwareRepository(bluetoothService)
-
-    @Provides
-    @Singleton
-    fun provideGitHubRepository(
-        githubApiService: GitHubApiService
-    ): GitHubRepository = GitHubRepository(githubApiService)
-
-    // Region: Use Cases
-    @Provides
-    @Singleton
-    fun provideLoadDeviceWithNameUseCase(
-        preferencesRepository: PreferencesRepository
-    ): LoadDeviceWithNameUseCase = LoadDeviceWithNameUseCase(preferencesRepository)
 
     // Region: Network
     @Provides
@@ -100,6 +76,37 @@ object MainModule {
 
     @Provides
     @Singleton
-    fun provideGitHubApiService(retrofit: Retrofit): GitHubApiService =
-        retrofit.create(GitHubApiService::class.java)
+    fun provideGitHubApiService(retrofit: Retrofit): GithubApiService =
+        retrofit.create(GithubApiService::class.java)
+
+    // Region: Repositories
+    @Provides
+    @Singleton
+    fun provideDeviceRepository(): DeviceRepository = DeviceRepository()
+
+    @Provides
+    @Singleton
+    fun provideGitHubRepository(
+        githubApiService: GithubApiService
+    ): GithubRepository = GithubRepository(githubApiService)
+
+    @Provides
+    @Singleton
+    fun provideFirmwareRepository(
+        bluetoothService: BluetoothService,
+        githubRepository: GithubRepository,
+        okHttpClient: OkHttpClient,
+        @ApplicationContext context: Context
+    ): FirmwareRepository = FirmwareRepository(
+        bluetoothService,
+        githubRepository,
+        okHttpClient,
+        context)
+
+    // Region: Use Cases
+    @Provides
+    @Singleton
+    fun provideLoadDeviceWithNameUseCase(
+        preferencesRepository: PreferencesRepository
+    ): LoadDeviceWithNameUseCase = LoadDeviceWithNameUseCase(preferencesRepository)
 }

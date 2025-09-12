@@ -17,11 +17,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import net.agolyakov.tetrisclockble.navigation.SetupNavGraph
+import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
 import net.agolyakov.tetrisclockble.ui.viewmodel.MyRequestPermission
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var bluetoothService: BluetoothService
 
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +34,21 @@ class MainActivity : ComponentActivity() {
         setContent {
             MainContent()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        bluetoothService.disconnect()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        bluetoothService.tryReconnect()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        bluetoothService.disconnect()
     }
 }
 

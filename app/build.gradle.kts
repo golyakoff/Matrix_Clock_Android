@@ -75,6 +75,7 @@ dependencies {
     implementation(libs.material3.window)
     implementation(libs.material.icons.extended)
     implementation(libs.bundles.networking)
+    implementation(libs.androidx.ui.text)
     kapt(libs.hilt.compiler)
     kapt(libs.moshi.kotlin.codegen)
     implementation(libs.nordic.ble)

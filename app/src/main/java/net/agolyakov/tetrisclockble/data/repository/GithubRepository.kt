@@ -3,12 +3,12 @@ package net.agolyakov.tetrisclockble.data.repository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.agolyakov.tetrisclockble.data.model.github.GithubRelease
-import net.agolyakov.tetrisclockble.data.remote.api.GitHubApiService
+import net.agolyakov.tetrisclockble.data.remote.api.GithubApiService
 import java.io.IOException
 import javax.inject.Inject
 
-class GitHubRepository @Inject constructor(
-    private val githubApiService: GitHubApiService
+class GithubRepository @Inject constructor(
+    private val githubApiService: GithubApiService
 ) {
     suspend fun getLatestRelease(includePreReleases: Boolean): GithubRelease {
         return withContext(Dispatchers.IO) {

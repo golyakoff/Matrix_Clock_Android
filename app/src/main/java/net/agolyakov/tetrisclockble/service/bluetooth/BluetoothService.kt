@@ -1,7 +1,12 @@
 package net.agolyakov.tetrisclockble.service.bluetooth
 
 import android.bluetooth.BluetoothDevice
+import android.content.Context
 import android.util.Log
+import androidx.activity.ComponentActivity
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,7 +23,6 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCh
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
-import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OtaStatusReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.RtcTemperatureReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TimeReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOffAlarmReadCharacteristicHandler
@@ -32,9 +36,9 @@ import kotlin.coroutines.resume
 
 @Singleton
 class BluetoothService @Inject constructor(
-    private val bluetoothAdapterProvider: BluetoothAdapterProvider,
+    private val bluetoothAdapterProvider: BluetoothAdapterProvider
 ) {
-    // Region: StateFlows and Handlers
+    private val _tag = "BluetoothService";
 
     // Firmware Version
     private var _firmwareVersion: String = "Unknown"
@@ -113,12 +117,10 @@ class BluetoothService @Inject constructor(
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private val _otaStatus = MutableStateFlow<String?>(null)
-    val otaStatus: StateFlow<String?> = _otaStatus
-    private val otaStatusHandler = OtaStatusReadCharacteristicHandler { status ->
-        _otaStatus.value = status
-    }
+    private val _currentDevice = MutableStateFlow<TetrisClockDevice?>(null)
+    val currentDevice: StateFlow<TetrisClockDevice?> = _currentDevice.asStateFlow()
 
+    private var _lastConnectedDevice : TetrisClockDevice? = null
 
     private val bleManager: TetrisClockBleManager = TetrisClockBleManager(
         bluetoothAdapterProvider.getContext(),
@@ -130,8 +132,7 @@ class BluetoothService @Inject constructor(
         turnOffAlarmReadCharacteristicHandler,
         agingOffsetReadCharacteristicHandler,
         rtcTemperatureReadCharacteristicHandler,
-        firmwareVersionReadCharacteristicHandler,
-        otaStatusReadCharacteristicHandler)
+        firmwareVersionReadCharacteristicHandler)
 
     private val connectionObserver = object : ConnectionObserver {
         override fun onDeviceConnecting(device: BluetoothDevice) {
@@ -152,6 +153,7 @@ class BluetoothService @Inject constructor(
         }
 
         override fun onDeviceFailedToConnect(device: BluetoothDevice, reason: Int) {
+            Log.e(_tag, "Connection failed with status code, $reason")
             _connectionState.value = ConnectionState.Error("Failed to connect: $reason")
         }
 
@@ -165,22 +167,68 @@ class BluetoothService @Inject constructor(
     }
 
     fun connect(tetrisClockDevice: TetrisClockDevice) {
+        if (_connectionState.value is ConnectionState.Connecting ||
+            _connectionState.value is ConnectionState.Connected) {
+            Log.w(_tag, "Already connecting/connected, ignoring new connection request")
+            return
+        }
+
+        _connectionState.value = ConnectionState.Connecting
         val device = bluetoothAdapterProvider.getAdapter().getRemoteDevice(tetrisClockDevice.macAddress)
         bleManager.connect(device)
             .retry(2, 100)
             .useAutoConnect(false)
             .done {
-                Log.i("BluetoothService", "Connection success!")
+                _currentDevice.value = tetrisClockDevice
+                _lastConnectedDevice = tetrisClockDevice
+                Log.i(_tag, "Connection success!")
             }
             .fail { _, status ->
-                Log.e("BluetoothService", "Connection failed, $status")
-                _connectionState.value = ConnectionState.Error("Connection failed: $status")
+                Log.e(_tag, "Connection failed, $status")
+                _connectionState.value = ConnectionState.Error("Connection failed with status code: $status")
             }
             .enqueue()
     }
 
     fun disconnect() {
-        bleManager.disconnect().enqueue()
+        if (_connectionState.value is ConnectionState.Disconnecting ||
+            _connectionState.value is ConnectionState.Disconnected) {
+            Log.w(_tag, "Already disconnecting/disconnected, ignoring")
+            return
+        }
+
+        _connectionState.value = ConnectionState.Disconnecting
+
+        bleManager.disconnect()
+            .done {
+                _currentDevice.value = null
+            }
+            .fail { _, status ->
+                Log.e(_tag, "Disconnection failed with status code: $status")
+                _currentDevice.value = null
+            }
+            .enqueue()
+        _currentDevice.value = null
+    }
+
+    private var _shouldMaintainConnection = MutableStateFlow(false)
+
+    fun setShouldMaintainConnection(shouldMaintain: Boolean) {
+        _shouldMaintainConnection.value = shouldMaintain
+        if (!shouldMaintain) {
+            disconnect()
+        }
+    }
+
+    fun tryReconnect() {
+        _lastConnectedDevice?.let {
+            if (_shouldMaintainConnection.value &&
+                _connectionState.value is ConnectionState.Disconnected)
+            {
+                Log.i(_tag, "Reconnecting to last device: ${it.deviceName}")
+                connect(it)
+            }
+        }
     }
 
     private fun startReadingAllCharacteristics() {
@@ -320,10 +368,9 @@ class BluetoothService @Inject constructor(
         operation: () -> Unit
     ): T {
         return withTimeout(timeout) {
-            resultFlow.value = null // Сбрасываем предыдущий результат
-            operation() // Запускаем операцию
+            resultFlow.value = null
+            operation()
 
-            // Ждём результат в Flow
             resultFlow
                 .filterNotNull()
                 .first()
@@ -356,40 +403,6 @@ class BluetoothService @Inject constructor(
                     continuation.resume(true)
                 } else {
                     continuation.resume(false)
-                }
-            }
-        }
-    }
-
-
-
-    // Метод для получения OTA статуса
-    suspend fun getOtaStatus(): String {
-        return suspendCancellableCoroutine { continuation ->
-            // Сбрасываем предыдущий статус
-            _otaStatus.value = OtaStatus.UNDEFINED
-
-            // Отправляем команду запроса статуса
-            bleManager.setOtaControlCharacteristic(
-                byteArrayOf(TetrisClockBleManager.OTA_CMD_GET_STATUS)
-            ) { success ->
-                if (success) {
-                    // Ждём получения статуса через уведомление
-                    try {
-                        // Ждём обновления статуса в течение таймаута
-                        val status = withTimeout(5000) {
-                            otaStatus
-                                .filterNotNull()
-                                .first()
-                        }
-                        continuation.resume(status)
-                    } catch (e: TimeoutCancellationException) {
-                        continuation.resume("Timeout waiting for status")
-                    } catch (e: Exception) {
-                        continuation.resume("Error: ${e.message}")
-                    }
-                } else {
-                    continuation.resume("Failed to send status request")
                 }
             }
         }

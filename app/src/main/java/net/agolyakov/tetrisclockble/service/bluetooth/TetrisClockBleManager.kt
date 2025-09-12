@@ -11,7 +11,6 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCh
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
-import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OtaStatusReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.RtcTemperatureReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TimeReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOffAlarmReadCharacteristicHandler
@@ -31,8 +30,7 @@ class TetrisClockBleManager(
     val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
     val agingOffsetReadCharacteristicHandler: AgingOffsetReadCharacteristicHandler,
     val rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler,
-    val versionReadCharacteristicHandler: VersionReadCharacteristicHandler,
-    val otaStatusReadCharacteristicHandler: OtaStatusReadCharacteristicHandler
+    val versionReadCharacteristicHandler: VersionReadCharacteristicHandler
 ) : BleManager(context) {
     private var mcTimeCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOnOffCharacteristic: BluetoothGattCharacteristic? = null
@@ -130,18 +128,6 @@ class TetrisClockBleManager(
                     )
                 }
             enableNotifications(mcVersionCharacteristic).enqueue()
-        }
-
-        // OTA Status characteristic notifications
-        otaStatusReadCharacteristicHandler.let {
-            setNotificationCallback(mcOtaControlCharacteristic)
-                .with { device: BluetoothDevice?, data: Data? ->
-                    otaStatusReadCharacteristicHandler.onReadCharacteristicCallback(
-                        device!!,
-                        data!!
-                    )
-                }
-            enableNotifications(mcOtaControlCharacteristic).enqueue()
         }
     }
 
@@ -260,14 +246,6 @@ class TetrisClockBleManager(
                 }
                 .enqueue()
         }
-    }
-
-    fun getOtaStatusCharacteristic() {
-        writeCharacteristic(
-            mcOtaControlCharacteristic,
-            byteArrayOf(OTA_CMD_GET_STATUS),
-            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        ).enqueue()
     }
 
     fun setTimeCharacteristic(time: TetrisClockTime) {

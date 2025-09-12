@@ -6,9 +6,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import kotlinx.coroutines.delay
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.ui.screen.device.DeviceScreen
-import net.agolyakov.tetrisclockble.ui.screen.firmware.FirmwareUpdateScreen
+import net.agolyakov.tetrisclockble.ui.screen.device.DeviceViewModel
+import net.agolyakov.tetrisclockble.ui.screen.firmware.FirmwareScreen
 import net.agolyakov.tetrisclockble.ui.screen.home.HomeScreen
 import net.agolyakov.tetrisclockble.ui.screen.home.HomeViewModel
 
@@ -22,6 +24,9 @@ fun SetupNavGraph(
         composable(route = Screen.Home.route) {
             val homeViewModel: HomeViewModel = hiltViewModel()
             LaunchedEffect(Unit) {
+                delay(50)
+                homeViewModel.bluetoothService.setShouldMaintainConnection(false)
+                delay(50)
                 homeViewModel.startScan()
             }
             HomeScreen(navController, homeViewModel)
@@ -31,11 +36,13 @@ fun SetupNavGraph(
             val device: TetrisClockDevice? =
                 navController.previousBackStackEntry?.savedStateHandle?.get<TetrisClockDevice>("device")
 
+            val deviceViewModel: DeviceViewModel = hiltViewModel()
+
             DeviceScreen(navController, device)
         }
 
-        composable(route = "firmware_update") {
-            FirmwareUpdateScreen(
+        composable(route = Screen.FirmwareUpdate.route) {
+            FirmwareScreen(
                 onBack = { navController.popBackStack() }
             )
         }

@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material3.AlertDialog
@@ -32,7 +35,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -62,7 +64,7 @@ import java.time.LocalDateTime
 @Composable
 fun DeviceScreen(
     navController: NavHostController,
-    device: TetrisClockDevice?,
+    device: TetrisClockDevice?
 ) {
     val viewModel: DeviceViewModel = hiltViewModel()
     val isOn: Boolean by viewModel.tetrisClockTetrisOn.collectAsState()
@@ -92,12 +94,7 @@ fun DeviceScreen(
 
     LaunchedEffect(device) {
         viewModel.connectToDevice(device)
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            viewModel.disconnect()
-        }
+        viewModel.bluetoothService.setShouldMaintainConnection(true)
     }
 
     DeviceSettings(
@@ -137,7 +134,7 @@ fun DeviceScreen(
 }
 
 @Composable
-fun DeviceSettings (
+fun DeviceSettings(
     deviceFriendlyName: String,
     deviceName: String,
     deviceMacAddress: String,
@@ -157,72 +154,72 @@ fun DeviceSettings (
     turnOffAlarm: TetrisClockAlarm,
     turnOffAlarmOnTimeClick: () -> Unit,
     turnOffAlarmOnActiveToggle: () -> Unit,
-    onFirmwareUpdateButtonClickAction: () -> Unit)
-{
-    Box(
+    onFirmwareUpdateButtonClickAction: () -> Unit
+) {
+    Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.background)
-            .fillMaxHeight()
-            .systemBarsPadding(),
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()) // ← Добавляем прокрутку здесь!
+            .systemBarsPadding()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Header(
-                deviceFriendlyName,
-                deviceName,
-                deviceMacAddress,
-            )
+        Header(
+            deviceFriendlyName,
+            deviceName,
+            deviceMacAddress,
+        )
 
-            Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(20.dp))
 
-            ClocksWithSyncButton(
-                bleTime,
-                phoneTime,
-                onButtonSyncClickAction,
-            )
+        ClocksWithSyncButton(
+            bleTime,
+            phoneTime,
+            onButtonSyncClickAction,
+        )
 
-            Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(10.dp))
 
-            AgingOffsetSpinner(
-                agingOffset,
-                onSpinnerAgingOffsetValueChanged
-            )
+        AgingOffsetSpinner(
+            agingOffset,
+            onSpinnerAgingOffsetValueChanged
+        )
 
-            Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(10.dp))
 
-            RtcTemperature(rtcTemperature)
+        RtcTemperature(rtcTemperature)
 
-            Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(30.dp))
 
-            OnOffAlarms(
-                turnOnAlarm,
-                turnOnAlarmOnTimeClick,
-                turnOnAlarmOnActiveToggle,
-                turnOffAlarm,
-                turnOffAlarmOnTimeClick,
-                turnOffAlarmOnActiveToggle
-            )
+        OnOffAlarms(
+            turnOnAlarm,
+            turnOnAlarmOnTimeClick,
+            turnOnAlarmOnActiveToggle,
+            turnOffAlarm,
+            turnOffAlarmOnTimeClick,
+            turnOffAlarmOnActiveToggle
+        )
 
-            Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(20.dp))
 
-            OnOffButton (
-                isOn,
-                onButtonOnOffClickAction,
-            )
+        OnOffButton(
+            isOn,
+            onButtonOnOffClickAction,
+        )
 
-            Spacer(Modifier.height(30.dp))
+        Spacer(Modifier.height(30.dp))
 
-            BrightnessSlider(
-                manualBrightness,
-                onSliderBrightnessValueChanged,
-            )
+        BrightnessSlider(
+            manualBrightness,
+            onSliderBrightnessValueChanged,
+        )
 
-            FirmwareUpdateButton(
-                onFirmwareUpdateButtonClickAction
-            )
-        }
+        Spacer(Modifier.height(20.dp))
+
+        FirmwareUpdateButton(
+            onFirmwareUpdateButtonClickAction
+        )
     }
 }
 

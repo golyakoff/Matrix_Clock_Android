@@ -8,17 +8,22 @@ import androidx.annotation.RequiresPermission
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.extensions.toBleDevice
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothAdapterProvider
+import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val deviceRepository: DeviceRepository,
-    private val bluetoothAdapterProvider: BluetoothAdapterProvider,
+    val bluetoothService: BluetoothService,
+    bluetoothAdapterProvider: BluetoothAdapterProvider,
 ): ViewModel() {
     private val foundDevices = HashMap<String, TetrisClockDevice>()
     private val _devices: MutableLiveData<List<TetrisClockDevice>> = MutableLiveData()
