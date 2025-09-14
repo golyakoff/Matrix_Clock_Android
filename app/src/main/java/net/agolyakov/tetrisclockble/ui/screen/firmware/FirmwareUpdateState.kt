@@ -11,7 +11,7 @@ sealed class FirmwareUpdateState {
     data class Downloading(val progress: Float) : FirmwareUpdateState()
     data class ReadyToInstall(val file: File, val release: GithubRelease) : FirmwareUpdateState()
     data class Installing(val progress: Float) : FirmwareUpdateState()
-    object Processing : FirmwareUpdateState()
     object Success : FirmwareUpdateState()
     data class Error(val message: String) : FirmwareUpdateState()
+    object Processing : FirmwareUpdateState()
 }

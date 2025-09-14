@@ -4,7 +4,9 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
@@ -32,6 +34,8 @@ class TetrisClockBleManager(
     val rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler,
     val versionReadCharacteristicHandler: VersionReadCharacteristicHandler
 ) : BleManager(context) {
+    private val _tag = "TetrisClockBleManager"
+    private val _mtuDeferred = CompletableDeferred<Int>()
     private var mcTimeCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOnOffCharacteristic: BluetoothGattCharacteristic? = null
     private var mcManualBrightValueCharacteristic: BluetoothGattCharacteristic? = null
@@ -91,6 +95,18 @@ class TetrisClockBleManager(
     override fun initialize() {
         super.initialize()
         setupNotifications()
+        setupMtu()
+    }
+
+    private fun setupMtu() {
+        requestMtu(517)
+            .with { device, mtu ->
+            Log.d(_tag, "MTU set to: $mtu")
+            _mtuDeferred.complete(mtu)
+        }.fail { device, status ->
+            Log.w(_tag, "MTU request failed, using default value 23")
+            _mtuDeferred.complete(23) // Fallback to default
+        }.enqueue()
     }
 
     private fun setupNotifications() {
@@ -327,7 +343,7 @@ class TetrisClockBleManager(
         writeCharacteristic(
             mcOtaDataCharacteristic,
             data,
-            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT /* WRITE_TYPE_NO_RESPONSE */
         ).with { device, data ->
             callback(true)
         }.fail { device, status ->
@@ -406,5 +422,8 @@ class TetrisClockBleManager(
         const val OTA_STATUS_OK: Byte = 0x00
         const val OTA_STATUS_ERROR: Byte = 0x01
         const val OTA_STATUS_BUSY: Byte = 0x02
+
+        // MTU
+        const val BLE_MTU: Long = 517L
     }
 }

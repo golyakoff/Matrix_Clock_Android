@@ -5,10 +5,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import no.nordicsemi.android.ble.data.Data
 
 class VersionReadCharacteristicHandler (
-    private var version: MutableStateFlow<String>
-
+    private var version: MutableStateFlow<String>,
+    private val readEvent: MutableStateFlow<Unit?>
 ): ReadCharacteristicHandler {
     override fun onReadCharacteristicCallback(device: BluetoothDevice, data: Data) {
-        version.value = data.value!!.toString(Charsets.US_ASCII)
+        val newVersion = data.value!!.toString(Charsets.US_ASCII)
+        version.value = newVersion
+        readEvent.value = Unit
     }
 }

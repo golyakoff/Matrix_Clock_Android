@@ -10,6 +10,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -44,8 +45,10 @@ class BluetoothService @Inject constructor(
     private var _firmwareVersion: String = "Unknown"
     private val _tetrisClockFirmwareVersion = MutableStateFlow(_firmwareVersion)
     val tetrisClockFirmwareVersion: StateFlow<String> = _tetrisClockFirmwareVersion
+    private val _versionReadEvent = MutableStateFlow<Unit?>(null)
     private val firmwareVersionReadCharacteristicHandler = VersionReadCharacteristicHandler(
-        _tetrisClockFirmwareVersion
+        version = _tetrisClockFirmwareVersion,
+        readEvent = _versionReadEvent
     )
 
     // Time
@@ -358,29 +361,16 @@ class BluetoothService @Inject constructor(
 
     // Region: OTA Update
 
-    private val _versionResult = MutableStateFlow<Result<String>?>(null)
-    private val _otaControlResult = MutableStateFlow<Result<Boolean>?>(null)
-    private val _otaDataResult = MutableStateFlow<Result<Boolean>?>(null)
+    suspend fun getCurrentVersion(): String {
+        return withTimeout(5000L) {
+            _versionReadEvent.value = null
+            bleManager.getVersionCharacteristic()
 
-    private suspend fun <T> waitForResult(
-        resultFlow: MutableStateFlow<Result<T>?>,
-        timeout: Long = 5000L,
-        operation: () -> Unit
-    ): T {
-        return withTimeout(timeout) {
-            resultFlow.value = null
-            operation()
-
-            resultFlow
+            _versionReadEvent
                 .filterNotNull()
                 .first()
-                .getOrThrow()
-        }
-    }
 
-    suspend fun getCurrentVersion(): String {
-        return waitForResult(_versionResult) {
-            bleManager.getVersionCharacteristic()
+            _tetrisClockFirmwareVersion.value
         }
     }
 

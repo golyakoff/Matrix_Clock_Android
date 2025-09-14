@@ -1,12 +1,34 @@
 package net.agolyakov.tetrisclockble.data.remote.api
 
 import net.agolyakov.tetrisclockble.data.model.github.GithubRelease
+import okhttp3.ResponseBody
 import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Path
+import retrofit2.http.Streaming
 
 interface GithubApiService {
-    @GET("repos/golyakoff/Matrix_Clock_ESP32/releases/latest")
-    suspend fun getLatestRelease(): GithubRelease
+    @GET("repos/{owner}/{repo}/releases/latest")
+    suspend fun getLatestRelease(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Header("Accept") accept: String  = "application/vnd.github.v3+json",
 
-    @GET("repos/golyakoff/Matrix_Clock_ESP32/releases")
-    suspend fun getAllReleases(): List<GithubRelease>
+    ): GithubRelease
+
+    @GET("repos/{owner}/{repo}/releases")
+    suspend fun getAllReleases(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Header("Accept") accept: String  = "application/vnd.github.v3+json",
+    ): List<GithubRelease>
+
+    @Streaming
+    @GET("repos/{owner}/{repo}/releases/assets/{asset_id}")
+    suspend fun downloadAsset(
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Path("asset_id") assetId: String,
+        @Header("Accept") accept: String = "application/octet-stream"
+    ): ResponseBody
 }

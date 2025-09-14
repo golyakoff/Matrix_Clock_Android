@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
+import java.io.File
 
 @Composable
 fun FirmwareScreen(
@@ -60,34 +62,34 @@ fun FirmwareScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         when (val currentState = state) {
-            is FirmwareUpdateState.Idle -> {
+            is FirmwareRepository.UpdateState.Idle -> {
                 IdleScreen(viewModel)
             }
-            is FirmwareUpdateState.Checking -> {
+            is FirmwareRepository.UpdateState.Checking -> {
                 CheckingScreen()
             }
-            is FirmwareUpdateState.UpdateAvailable -> {
-                UpdateAvailableScreen(currentState, viewModel)
-            }
-            is FirmwareUpdateState.NoUpdate -> {
-                NoUpdateScreen(currentState, onBack)
-            }
-            is FirmwareUpdateState.Downloading -> {
-                DownloadingScreen(progress, statusMessage)
-            }
-            is FirmwareUpdateState.ReadyToInstall -> {
-                ReadyToInstallScreen(currentState, viewModel)
-            }
-            is FirmwareUpdateState.Installing -> {
-                InstallingScreen(progress, statusMessage)
-            }
-            is FirmwareUpdateState.Processing -> {
+            is FirmwareRepository.UpdateState.Processing -> {
                 ProcessingScreen(progress, statusMessage)
             }
-            is FirmwareUpdateState.Success -> {
+            is FirmwareRepository.UpdateState.UpdateAvailable -> {
+                UpdateAvailableScreen(currentState, viewModel)
+            }
+            is FirmwareRepository.UpdateState.NoUpdate -> {
+                NoUpdateScreen(currentState, onBack)
+            }
+            is FirmwareRepository.UpdateState.Downloading -> {
+                DownloadingScreen(progress, statusMessage)
+            }
+            is FirmwareRepository.UpdateState.ReadyToInstall -> {
+                ReadyToInstallScreen(currentState, viewModel)
+            }
+            is FirmwareRepository.UpdateState.Installing -> {
+                InstallingScreen(progress, statusMessage)
+            }
+            is FirmwareRepository.UpdateState.Success -> {
                 SuccessScreen(onBack)
             }
-            is FirmwareUpdateState.Error -> {
+            is FirmwareRepository.UpdateState.Error -> {
                 ErrorScreen(currentState, viewModel, onBack)
             }
         }
@@ -131,7 +133,7 @@ private fun CheckingScreen() {
 
 @Composable
 private fun UpdateAvailableScreen(
-    state: FirmwareUpdateState.UpdateAvailable,
+    state: FirmwareRepository.UpdateState.UpdateAvailable,
     viewModel: FirmwareViewModel
 ) {
     Column(
@@ -174,7 +176,7 @@ private fun UpdateAvailableScreen(
 
 @Composable
 private fun NoUpdateScreen(
-    state: FirmwareUpdateState.NoUpdate,
+    state: FirmwareRepository.UpdateState.NoUpdate,
     onBack: () -> Unit
 ) {
     Column(
@@ -223,7 +225,7 @@ private fun DownloadingScreen(
 
 @Composable
 private fun ReadyToInstallScreen(
-    state: FirmwareUpdateState.ReadyToInstall,
+    state: FirmwareRepository.UpdateState.ReadyToInstall,
     viewModel: FirmwareViewModel
 ) {
     Column(
@@ -314,7 +316,7 @@ private fun SuccessScreen(onBack: () -> Unit) {
 
 @Composable
 private fun ErrorScreen(
-    state: FirmwareUpdateState.Error,
+    state: FirmwareRepository.UpdateState.Error,
     viewModel: FirmwareViewModel,
     onBack: () -> Unit
 ) {

@@ -77,7 +77,6 @@ dependencies {
     implementation(libs.bundles.networking)
     implementation(libs.androidx.ui.text)
     kapt(libs.hilt.compiler)
-    kapt(libs.moshi.kotlin.codegen)
     implementation(libs.nordic.ble)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

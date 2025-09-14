@@ -15,15 +15,21 @@ import net.agolyakov.tetrisclockble.domain.usecase.LoadDeviceWithNameUseCase
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothAdapterProvider
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
 import net.agolyakov.tetrisclockble.data.remote.api.GithubApiService
+import net.agolyakov.tetrisclockble.data.remote.interceptors.AuthInterceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object MainModule {
+    private val owner = "golyakoff"
+    private val repo = "Matrix_Clock_ESP32"
+
+    // TODO: Заменить на получение из безопасного хранилища
+    private val token = "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"
 
     // Region: Context Providers
     @Provides
@@ -40,7 +46,6 @@ object MainModule {
     @Provides
     @Singleton
     fun provideBluetoothService(
-        @ApplicationContext context: Context,
         bluetoothAdapterProvider: BluetoothAdapterProvider
     ): BluetoothService = BluetoothService(bluetoothAdapterProvider)
 
@@ -60,7 +65,22 @@ object MainModule {
     // Region: Network
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
+    fun provideGitHubToken(): String {
+        return token
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthInterceptor(token: String): AuthInterceptor {
+        return AuthInterceptor(token)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(
+        authInterceptor: AuthInterceptor
+    ): OkHttpClient = OkHttpClient.Builder()
+        .addInterceptor(authInterceptor)
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
         })
@@ -71,7 +91,7 @@ object MainModule {
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit = Retrofit.Builder()
         .baseUrl("https://api.github.com/")
         .client(okHttpClient)
-        .addConverterFactory(MoshiConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create())
         .build()
 
     @Provides
@@ -88,7 +108,11 @@ object MainModule {
     @Singleton
     fun provideGitHubRepository(
         githubApiService: GithubApiService
-    ): GithubRepository = GithubRepository(githubApiService)
+    ): GithubRepository = GithubRepository(
+        githubApiService = githubApiService,
+        owner = owner,
+        repo = repo
+    )
 
     @Provides
     @Singleton
@@ -101,7 +125,8 @@ object MainModule {
         bluetoothService,
         githubRepository,
         okHttpClient,
-        context)
+        context
+    )
 
     // Region: Use Cases
     @Provides
