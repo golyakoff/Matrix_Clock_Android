@@ -99,7 +99,7 @@ class TetrisClockBleManager(
     }
 
     private fun setupMtu() {
-        requestMtu(517)
+        requestMtu(BLE_MTU)
             .with { device, mtu ->
             Log.d(_tag, "MTU set to: $mtu")
             _mtuDeferred.complete(mtu)
@@ -414,16 +414,9 @@ class TetrisClockBleManager(
         // OTA Control Commands
         const val OTA_CMD_START: Byte = 0x01
         const val OTA_CMD_END: Byte = 0x02
-        const val OTA_CMD_SWITCH_REBOOT: Byte = 0x03
-        const val OTA_CMD_ABORT: Byte = 0x04
-        const val OTA_CMD_GET_STATUS: Byte = 0x05
-
-        // OTA Status Responses
-        const val OTA_STATUS_OK: Byte = 0x00
-        const val OTA_STATUS_ERROR: Byte = 0x01
-        const val OTA_STATUS_BUSY: Byte = 0x02
+        const val OTA_CMD_ABORT: Byte = 0x03
 
         // MTU
-        const val BLE_MTU: Long = 517L
+        const val BLE_MTU: Int = 517
     }
 }

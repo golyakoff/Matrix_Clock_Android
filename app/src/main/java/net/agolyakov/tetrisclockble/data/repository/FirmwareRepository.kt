@@ -12,12 +12,13 @@ import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.OTA_CMD_START
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.OTA_CMD_END
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.OTA_CMD_ABORT
-import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.OTA_CMD_SWITCH_REBOOT
 import okhttp3.OkHttpClient
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
@@ -69,7 +70,7 @@ class FirmwareRepository @Inject constructor(
     ): UpdateState {
         return withContext(Dispatchers.IO) {
             try {
-                val asset = release.assets.first { it.name.endsWith("_debug_4mb_fw.bin") }
+                val asset = release.assets.first { it.name.endsWith("_release_4mb_fw.bin") }
                 val firmwareFile = downloadFirmwareAsset(asset, onProgress)
                 validateFirmware(firmwareFile, asset)
                 UpdateState.ReadyToInstall(firmwareFile, release)
@@ -103,7 +104,7 @@ class FirmwareRepository @Inject constructor(
             val currentVersion = getCurrentVersion()
 
             // 2. Проверяем обновления
-            onProgress(10f, "Checking for updates...")
+            onProgress(1f, "Checking for updates...")
             val updateState = checkForUpdates(includePreReleases)
             if (updateState is UpdateState.NoUpdate) {
                 return@withContext UpdateResult.NoUpdateAvailable(currentVersion)
@@ -112,9 +113,9 @@ class FirmwareRepository @Inject constructor(
             val release = (updateState as UpdateState.UpdateAvailable).release
 
             // 3. Скачиваем прошивку
-            onProgress(20f, "Downloading firmware...")
+            onProgress(2f, "Downloading firmware...")
             val downloadResult = downloadFirmware(release) { downloadProgress ->
-                val overallProgress = 20f + downloadProgress * 0.4f
+                val overallProgress = 2f + downloadProgress * 0.03f
                 onProgress(overallProgress, "Downloading...")
             }
 
@@ -125,9 +126,9 @@ class FirmwareRepository @Inject constructor(
             val firmwareFile = (downloadResult as UpdateState.ReadyToInstall).file
 
             // 4. Устанавливаем прошивку
-            onProgress(60f, "Installing firmware...")
+            onProgress(5f, "Installing firmware...")
             val installResult = installFirmware(firmwareFile) { installProgress ->
-                val overallProgress = 60f + installProgress * 0.3f
+                val overallProgress = 5f + installProgress * 0.9f
                 onProgress(overallProgress, "Installing...")
             }
 
@@ -136,8 +137,8 @@ class FirmwareRepository @Inject constructor(
             }
 
             // 5. Проверяем обновление
-            onProgress(90f, "Verifying update...")
-            delay(5000) // Ждём перезагрузки
+            onProgress(95f, "Verifying update...")
+            delay(5000)
 
             var retries = 0
             while (retries < 10) {
@@ -231,9 +232,8 @@ class FirmwareRepository @Inject constructor(
     ) = withContext(Dispatchers.IO) {
         var inputStream: FileInputStream? = null
         try {
-            val startSuccess = bluetoothService.setOtaControlCharacteristic(
-                byteArrayOf(OTA_CMD_START)
-            )
+            val startCommand = createStartCommand(firmwareFile.length())
+            val startSuccess = bluetoothService.setOtaControlCharacteristic(startCommand)
             if (!startSuccess) throw IOException("Failed to start OTA process")
 
             inputStream = FileInputStream(firmwareFile)
@@ -256,15 +256,8 @@ class FirmwareRepository @Inject constructor(
             val endSuccess = bluetoothService.setOtaControlCharacteristic(
                 byteArrayOf(OTA_CMD_END)
             )
-            if (!endSuccess) throw IOException("Failed to end OTA process")
-
-            val rebootSuccess = bluetoothService.setOtaControlCharacteristic(
-                byteArrayOf(OTA_CMD_SWITCH_REBOOT)
-            )
-            if (!rebootSuccess) {
-                throw IOException("Failed to switch and reboot")
-            }
-
+            if (!endSuccess)
+                throw IOException("Failed to end OTA process")
         } catch (e: Exception) {
             try {
                 bluetoothService.setOtaControlCharacteristic(
@@ -276,6 +269,16 @@ class FirmwareRepository @Inject constructor(
         } finally {
             inputStream?.close()
         }
+    }
+
+    private fun createStartCommand(fileSize: Long): ByteArray {
+        val buffer = ByteBuffer.allocate(5)
+        buffer.order(ByteOrder.LITTLE_ENDIAN)
+
+        buffer.put(OTA_CMD_START)
+        buffer.putInt(fileSize.toInt())
+
+        return buffer.array()
     }
 
     private fun isNewVersionAvailable(current: String, latest: String): Boolean {
