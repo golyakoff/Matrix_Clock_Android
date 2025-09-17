@@ -24,6 +24,10 @@ class FirmwareViewModel @Inject constructor(
     private val _statusMessage = MutableStateFlow("")
     val statusMessage: StateFlow<String> = _statusMessage.asStateFlow()
 
+    init {
+        checkForUpdates()
+    }
+
     fun checkForUpdates(includePreReleases: Boolean = false) {
         viewModelScope.launch {
             _uiState.value = FirmwareRepository.UpdateState.Checking

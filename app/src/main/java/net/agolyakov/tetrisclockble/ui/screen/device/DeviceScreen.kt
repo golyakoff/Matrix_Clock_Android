@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -653,17 +652,8 @@ fun FirmwareUpdateButton(
         onClick = onButtonClick,
         modifier = Modifier.padding(16.dp)
     ) {
-        Text("Проверить обновления")
+        Text("Обновление прошивки устройства")
     }
-
-    // Настройки для pre-releases
-    var includePreReleases by remember { mutableStateOf(false) }
-    Switch(
-        checked = includePreReleases,
-        onCheckedChange = { includePreReleases = it },
-        modifier = Modifier.padding(16.dp)
-    )
-    Text("Предлагать предрелизные обновления")
 }
 
 @Composable

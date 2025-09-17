@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
 import net.agolyakov.tetrisclockble.data.model.github.GithubAsset
 import net.agolyakov.tetrisclockble.data.model.github.GithubRelease
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
@@ -100,11 +101,11 @@ class FirmwareRepository @Inject constructor(
     ): UpdateResult = withContext(Dispatchers.IO) {
         try {
             // 1. Проверяем текущую версию
-            onProgress(0f, "Checking current version...")
+            onProgress(0f, "Получение текущей версии...")
             val currentVersion = getCurrentVersion()
 
             // 2. Проверяем обновления
-            onProgress(1f, "Checking for updates...")
+            onProgress(1f, "Проверка наличия обновлений...")
             val updateState = checkForUpdates(includePreReleases)
             if (updateState is UpdateState.NoUpdate) {
                 return@withContext UpdateResult.NoUpdateAvailable(currentVersion)
@@ -113,10 +114,10 @@ class FirmwareRepository @Inject constructor(
             val release = (updateState as UpdateState.UpdateAvailable).release
 
             // 3. Скачиваем прошивку
-            onProgress(2f, "Downloading firmware...")
+            onProgress(2f, "Скачивание прошивки...")
             val downloadResult = downloadFirmware(release) { downloadProgress ->
                 val overallProgress = 2f + downloadProgress * 0.03f
-                onProgress(overallProgress, "Downloading...")
+                onProgress(overallProgress, "Скачивание прошивки...")
             }
 
             if (downloadResult is UpdateState.Error) {
@@ -126,10 +127,10 @@ class FirmwareRepository @Inject constructor(
             val firmwareFile = (downloadResult as UpdateState.ReadyToInstall).file
 
             // 4. Устанавливаем прошивку
-            onProgress(5f, "Installing firmware...")
+            onProgress(5f, "Установка обновления...")
             val installResult = installFirmware(firmwareFile) { installProgress ->
-                val overallProgress = 5f + installProgress * 0.9f
-                onProgress(overallProgress, "Installing...")
+                val overallProgress = 5f + installProgress * 0.94f
+                onProgress(overallProgress, "Установка обновления...")
             }
 
             if (installResult is UpdateState.Error) {
@@ -137,16 +138,24 @@ class FirmwareRepository @Inject constructor(
             }
 
             // 5. Проверяем обновление
-            onProgress(95f, "Verifying update...")
+            onProgress(99f, "Перезагрузка устройства...")
+            bluetoothService.disconnect()
+
             delay(5000)
 
             var retries = 0
-            while (retries < 10) {
+            while (retries < 20) {
                 try {
-                    val newVersion = getCurrentVersion()
-                    if (newVersion != currentVersion) {
-                        onProgress(100f, "Update completed!")
-                        return@withContext UpdateResult.Success(currentVersion, newVersion)
+                    if (bluetoothService.connectionState.value != ConnectionState.Connected) {
+                        bluetoothService.tryReconnect()
+                        delay(2000)
+                    }
+
+                    val uploadedFirmwareVersion = updateState.release.tagName
+                    val realDeviceFirmwareVersion = getCurrentVersion()
+                    if (realDeviceFirmwareVersion == uploadedFirmwareVersion) {
+                        onProgress(100f, "Обновление завершено!")
+                        return@withContext UpdateResult.Success(currentVersion, realDeviceFirmwareVersion)
                     }
                     delay(1000)
                     retries++
@@ -156,18 +165,19 @@ class FirmwareRepository @Inject constructor(
                 }
             }
 
-            UpdateResult.Error("Failed to verify update")
+            UpdateResult.Error("Не могу проверить корректность установки!")
 
         } catch (e: CancellationException) {
             abortOta()
             UpdateResult.Cancelled
         } catch (e: Exception) {
             abortOta()
-            UpdateResult.Error("Update failed: ${e.message}", e)
+            UpdateResult.Error("Обновление завершилось ошибкой: ${e.message}", e)
         }
     }
 
     suspend fun abortOta() {
+        bluetoothService.exitOtaUpdateMode()
         val success = bluetoothService.setOtaControlCharacteristic(
             byteArrayOf(OTA_CMD_ABORT)
         )
@@ -232,6 +242,7 @@ class FirmwareRepository @Inject constructor(
     ) = withContext(Dispatchers.IO) {
         var inputStream: FileInputStream? = null
         try {
+            bluetoothService.enterOtaUpdateMode();
             val startCommand = createStartCommand(firmwareFile.length())
             val startSuccess = bluetoothService.setOtaControlCharacteristic(startCommand)
             if (!startSuccess) throw IOException("Failed to start OTA process")
@@ -253,21 +264,17 @@ class FirmwareRepository @Inject constructor(
                 delay(30)
             }
 
-            val endSuccess = bluetoothService.setOtaControlCharacteristic(
-                byteArrayOf(OTA_CMD_END)
-            )
-            if (!endSuccess)
-                throw IOException("Failed to end OTA process")
+            bluetoothService.setOtaControlCharacteristic(byteArrayOf(OTA_CMD_END))
+
         } catch (e: Exception) {
             try {
-                bluetoothService.setOtaControlCharacteristic(
-                    byteArrayOf(OTA_CMD_ABORT)
-                )
+                bluetoothService.setOtaControlCharacteristic(byteArrayOf(OTA_CMD_ABORT))
             } catch (ignore: Exception) {
             }
             throw IOException("Firmware installation failed: ${e.message}", e)
         } finally {
             inputStream?.close()
+            bluetoothService.exitOtaUpdateMode();
         }
     }
 

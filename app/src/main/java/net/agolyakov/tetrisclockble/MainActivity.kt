@@ -38,7 +38,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        bluetoothService.disconnect()
+        if (!bluetoothService.shouldPreserveConnection()) {
+            bluetoothService.disconnect()
+        }
     }
 
     override fun onResume() {

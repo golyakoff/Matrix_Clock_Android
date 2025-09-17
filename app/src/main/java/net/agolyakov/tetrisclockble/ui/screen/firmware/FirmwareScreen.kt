@@ -1,5 +1,7 @@
 package net.agolyakov.tetrisclockble.ui.screen.firmware
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,7 +30,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
-import java.io.File
 
 @Composable
 fun FirmwareScreen(
@@ -42,55 +43,56 @@ fun FirmwareScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header with back button
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-            }
-            Text(
-                text = "Обновление прошивки",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.weight(1f)
-            )
-        }
+            when (val currentState = state) {
+                is FirmwareRepository.UpdateState.Idle -> {
+                    IdleScreen(viewModel)
+                }
 
-        Spacer(modifier = Modifier.height(16.dp))
+                is FirmwareRepository.UpdateState.Checking -> {
+                    CheckingScreen()
+                }
 
-        when (val currentState = state) {
-            is FirmwareRepository.UpdateState.Idle -> {
-                IdleScreen(viewModel)
-            }
-            is FirmwareRepository.UpdateState.Checking -> {
-                CheckingScreen()
-            }
-            is FirmwareRepository.UpdateState.Processing -> {
-                ProcessingScreen(progress, statusMessage)
-            }
-            is FirmwareRepository.UpdateState.UpdateAvailable -> {
-                UpdateAvailableScreen(currentState, viewModel)
-            }
-            is FirmwareRepository.UpdateState.NoUpdate -> {
-                NoUpdateScreen(currentState, onBack)
-            }
-            is FirmwareRepository.UpdateState.Downloading -> {
-                DownloadingScreen(progress, statusMessage)
-            }
-            is FirmwareRepository.UpdateState.ReadyToInstall -> {
-                ReadyToInstallScreen(currentState, viewModel)
-            }
-            is FirmwareRepository.UpdateState.Installing -> {
-                InstallingScreen(progress, statusMessage)
-            }
-            is FirmwareRepository.UpdateState.Success -> {
-                SuccessScreen(onBack)
-            }
-            is FirmwareRepository.UpdateState.Error -> {
-                ErrorScreen(currentState, viewModel, onBack)
+                is FirmwareRepository.UpdateState.Processing -> {
+                    ProcessingScreen(progress, statusMessage)
+                }
+
+                is FirmwareRepository.UpdateState.UpdateAvailable -> {
+                    UpdateAvailableScreen(currentState, viewModel, onBack)
+                }
+
+                is FirmwareRepository.UpdateState.NoUpdate -> {
+                    NoUpdateScreen(currentState, onBack)
+                }
+
+                is FirmwareRepository.UpdateState.Downloading -> {
+                    DownloadingScreen(progress, statusMessage)
+                }
+
+                is FirmwareRepository.UpdateState.ReadyToInstall -> {
+                    ReadyToInstallScreen(currentState, viewModel)
+                }
+
+                is FirmwareRepository.UpdateState.Installing -> {
+                    InstallingScreen(progress, statusMessage)
+                }
+
+                is FirmwareRepository.UpdateState.Success -> {
+                    SuccessScreen(onBack)
+                }
+
+                is FirmwareRepository.UpdateState.Error -> {
+                    ErrorScreen(currentState, viewModel, onBack)
+                }
             }
         }
     }
@@ -99,11 +101,10 @@ fun FirmwareScreen(
 @Composable
 private fun IdleScreen(viewModel: FirmwareViewModel) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Проверка обновлений прошивки",
+            text = "Обновление прошивки устройства",
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center
         )
@@ -114,7 +115,7 @@ private fun IdleScreen(viewModel: FirmwareViewModel) {
             onClick = { viewModel.checkForUpdates() },
             modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            Text("Проверить обновления")
+            Text("Искать обновления")
         }
     }
 }
@@ -122,8 +123,7 @@ private fun IdleScreen(viewModel: FirmwareViewModel) {
 @Composable
 private fun CheckingScreen() {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularProgressIndicator()
         Spacer(modifier = Modifier.height(16.dp))
@@ -134,11 +134,11 @@ private fun CheckingScreen() {
 @Composable
 private fun UpdateAvailableScreen(
     state: FirmwareRepository.UpdateState.UpdateAvailable,
-    viewModel: FirmwareViewModel
+    viewModel: FirmwareViewModel,
+    onBack: () -> Unit
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Доступно обновление!",
@@ -157,19 +157,13 @@ private fun UpdateAvailableScreen(
             onClick = { viewModel.performCompleteUpdate() },
             modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            Text("Обновить автоматически")
-        }
+            Text("Обновить")
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            onClick = { viewModel.downloadFirmware(state.release) },
-            modifier = Modifier.fillMaxWidth(0.8f),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
-        ) {
-            Text("Только скачать")
+            Button(onClick = onBack) {
+                Text("Назад")
+            }
         }
     }
 }
@@ -180,8 +174,7 @@ private fun NoUpdateScreen(
     onBack: () -> Unit
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
@@ -213,12 +206,11 @@ private fun DownloadingScreen(
     statusMessage: String
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularProgressIndicator(progress = { progress / 100f })
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Скачивание: ${progress.toInt()}%")
+        Text("Скачивание: ${"%.1f".format(progress)}%")
         Text(statusMessage, style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -229,8 +221,7 @@ private fun ReadyToInstallScreen(
     viewModel: FirmwareViewModel
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Прошивка готова к установке",
@@ -259,12 +250,11 @@ private fun InstallingScreen(
     statusMessage: String
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularProgressIndicator(progress = { progress / 100f })
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Установка: ${progress.toInt()}%")
+        Text("Установка: ${"%.1f".format(progress)}%")
         Text(statusMessage, style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -275,13 +265,12 @@ private fun ProcessingScreen(
     statusMessage: String
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CircularProgressIndicator(progress = { progress / 100f })
         Spacer(modifier = Modifier.height(16.dp))
         Text("Выполняется обновление...")
-        Text("${progress.toInt()}%")
+        Text("${"%.1f".format(progress)}%")
         Text(statusMessage, style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -289,8 +278,7 @@ private fun ProcessingScreen(
 @Composable
 private fun SuccessScreen(onBack: () -> Unit) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
@@ -321,8 +309,7 @@ private fun ErrorScreen(
     onBack: () -> Unit
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = Icons.Default.Error,

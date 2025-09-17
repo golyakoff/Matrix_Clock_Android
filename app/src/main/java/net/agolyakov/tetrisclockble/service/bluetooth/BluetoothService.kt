@@ -39,7 +39,23 @@ import kotlin.coroutines.resume
 class BluetoothService @Inject constructor(
     private val bluetoothAdapterProvider: BluetoothAdapterProvider
 ) {
-    private val _tag = "BluetoothService";
+    private val _tag = "BluetoothService"
+
+    private var isOtaUpdateMode = false
+
+    fun enterOtaUpdateMode() {
+        isOtaUpdateMode = true
+        Log.d("BluetoothService", "Entered OTA update mode - connections will be preserved")
+    }
+
+    fun exitOtaUpdateMode() {
+        isOtaUpdateMode = false
+        Log.d("BluetoothService", "Exited OTA update mode")
+    }
+
+    fun shouldPreserveConnection(): Boolean {
+        return isOtaUpdateMode
+    }
 
     // Firmware Version
     private var _firmwareVersion: String = "Unknown"
