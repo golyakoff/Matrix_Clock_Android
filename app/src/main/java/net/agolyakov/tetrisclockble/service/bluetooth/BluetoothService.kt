@@ -364,7 +364,7 @@ class BluetoothService @Inject constructor(
                 val current = _tetrisClockTurnOnAlarm.value
                 val newAlarm = current.copy(isActive = !current.isActive)
                 _tetrisClockTurnOnAlarm.value = newAlarm
-                bleManager.setTurnOffAlarmCharacteristic(newAlarm)
+                bleManager.setTurnOnAlarmCharacteristic(newAlarm)
             }
             TetrisClockAlarmType.TURN_OFF -> {
                 val current = _tetrisClockTurnOffAlarm.value

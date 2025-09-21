@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.material.icons.extended)
     implementation(libs.bundles.networking)
     implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.ui.text.google.fonts)
     kapt(libs.hilt.compiler)
     implementation(libs.nordic.ble)
     testImplementation(libs.junit)

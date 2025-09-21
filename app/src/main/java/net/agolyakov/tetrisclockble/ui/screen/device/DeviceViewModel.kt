@@ -1,5 +1,6 @@
 package net.agolyakov.tetrisclockble.ui.screen.device
 
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -127,9 +128,13 @@ class DeviceViewModel @Inject constructor(
         }
     }
 
-    /// TODO: REMOVE HARDCODE FOR TetrisClockAlarmType.TURN_OFF
-    fun setAlarmTime(hour: Int, minute: Int, active: Boolean) {
-        bluetoothService.setAlarmTime(TetrisClockAlarmType.TURN_OFF, hour, minute, active)
+    fun setAlarmTime(alarmType: TetrisClockAlarmType, hour: Int, minute: Int, isActive: Boolean) {
+        Log.d("DeviceViewModel", "setAlarmTime: active=$isActive $hour:$minute for ${alarmType}")
+        bluetoothService.setAlarmTime(
+            alarmType,
+            hour,
+            minute,
+            isActive)
     }
 
     fun toggleOnOffCharacteristic() {
@@ -149,6 +154,7 @@ class DeviceViewModel @Inject constructor(
     }
 
     fun toggleAlarmActive(alarmType: TetrisClockAlarmType) {
+        Log.d("DeviceViewModel", "toggleAlarmActive for ${alarmType}")
         bluetoothService.toggleAlarmActive(alarmType)
     }
 }

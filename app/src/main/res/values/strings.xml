@@ -4,14 +4,14 @@
     <string name="mc_manual_turn_on_clock">Включить часы</string>
     <string name="mc_manual_turn_off_clock">Выключить часы</string>
     <string name="mc_manual_brightness">Яркость</string>
-    <string name="mc_aging_offset">Коррекция частоты</string>
+    <string name="mc_aging_offset">Подстроить частоту</string>
     <string name="mc_rtc_temperature">Температура чипа таймера</string>
     <string name="mc_degrees_celsius">°C</string>
     <string name="mc_ppm">ч/млн</string>
     <string name="perm_bluetooth_is_off">Приложение требует включения Bluetooth</string>
     <string name="perm_not_enough_permissions">Приложение не получило необходимых разрешений</string>
-    <string name="mc_time_of_tetris_clock">Время часов</string>
-    <string name="mc_time_of_mobile_phone">Время телефона</string>
+    <string name="mc_time_of_tetris_clock">На часах</string>
+    <string name="mc_time_of_mobile_phone">Точное время</string>
     <string name="mc_action_synchronize_time">Синхронизировать время</string>
     <string name="mc_action_set_time">Установить время</string>
     <string name="mc_check_auto_on">Авто ВКЛ</string>

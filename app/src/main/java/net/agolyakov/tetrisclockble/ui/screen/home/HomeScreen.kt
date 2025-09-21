@@ -3,6 +3,7 @@ package net.agolyakov.tetrisclockble.ui.screen.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
@@ -16,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
@@ -34,8 +36,8 @@ fun HomeScreen(
 
     Box(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.background)
-            .fillMaxHeight()
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .fillMaxSize()
             .systemBarsPadding(),
         contentAlignment = Alignment.TopCenter
     ) {
@@ -47,8 +49,8 @@ fun HomeScreen(
 fun DeviceList(deviceList: List<TetrisClockDevice>, navController: NavHostController) {
     LazyColumn(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.background),
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         itemsIndexed(deviceList) {
             _, item -> Device(item, navController)
@@ -60,9 +62,12 @@ fun DeviceList(deviceList: List<TetrisClockDevice>, navController: NavHostContro
 fun Device(device: TetrisClockDevice, navController: NavHostController) {
     Card(
         colors = CardDefaults.cardColors(
-            containerColor =MaterialTheme.colorScheme.primary),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         modifier = Modifier
-            .padding(5.dp, 5.dp, 5.dp, 0.dp)
+            .padding(16.dp, 16.dp, 16.dp, 0.dp)
             .clickable {
                 navController.currentBackStackEntry?.savedStateHandle?.set(
                     key = "device",
@@ -70,40 +75,55 @@ fun Device(device: TetrisClockDevice, navController: NavHostController) {
                 )
                 navController.navigate(Screen.Device.route)
             }
-    ){
-        Row(verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(vertical = 16.dp, horizontal = 24.dp)
         ) {
-            Box(modifier = Modifier
-                .padding(24.dp)){
-                Icon(
-                    Icons.Outlined.AccessTime,
-                    contentDescription = "Настроить",
+            Icon(
+                Icons.Outlined.AccessTime,
+                tint = MaterialTheme.colorScheme.primary,
+                contentDescription = "Настроить",
+                modifier = Modifier
+                    .size(48.dp)
+            )
+
+            Spacer(Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
                     modifier = Modifier
-                        .size(36.dp))
-            }
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row {
+                        .fillMaxWidth()
+                ) {
                     Text(
+                        modifier = Modifier,
                         text = device.friendlyName ?: device.deviceName,
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
                         overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onPrimary
+                        maxLines = 1,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
-                Row {
-                    Text(
-                        text = device.macAddress,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    )
-                }
+                Text(
+                    text = device.macAddress,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.outline
+                )
+
             }
         }
     }
 }
 
 @Composable
-@Preview(showBackground = true, name = "Light")
+@Preview(
+    name = "Light Schema",
+    heightDp = 800,
+    showBackground = false)
 fun DeviceListPreview_1() {
     TetrisClockBLETheme(darkTheme = false) {
         val deviceList = DeviceRepository().getDeviceList()
@@ -112,7 +132,10 @@ fun DeviceListPreview_1() {
 }
 
 @Composable
-@Preview(showBackground = true, name = "Dark")
+@Preview(
+    name = "Dark Schema",
+    heightDp = 800,
+    showBackground = true)
 fun DeviceListPreview_2() {
     TetrisClockBLETheme(darkTheme = true) {
         val deviceList = DeviceRepository().getDeviceList()

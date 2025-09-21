@@ -44,7 +44,22 @@ data class TetrisClockTime(
     fun formatTime(): String =
         localDateTime.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
 
+    fun formatTimeHours(): String =
+        localDateTime.format(DateTimeFormatter.ofPattern("HH"))
+
+    fun formatTimeMinutes(): String =
+        localDateTime.format(DateTimeFormatter.ofPattern("mm"))
+
+    fun formatTimeSeconds(): String =
+        localDateTime.format(DateTimeFormatter.ofPattern("ss"))
+
     fun formatDate(): String =
         localDateTime.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
+
+    fun formatDayAndMonth(): String =
+        localDateTime.format(DateTimeFormatter.ofPattern("dd MMMM"))
+
+    fun formatYear(): String =
+        localDateTime.format(DateTimeFormatter.ofPattern("yyyy"))
 
 }

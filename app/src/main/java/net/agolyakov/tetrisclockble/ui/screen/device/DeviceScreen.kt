@@ -23,8 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Adjust
+import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.PermDeviceInformation
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SwapCalls
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SystemUpdateAlt
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -51,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,6 +73,7 @@ import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.ui.component.TimePickerDialogState
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
+import net.agolyakov.tetrisclockble.ui.theme.timeHeadlineMedium
 import java.time.LocalDateTime
 
 @Composable
@@ -91,7 +98,13 @@ fun DeviceScreen(
             initialMinute = timePickerState.minute,
             onDismiss = { viewModel.hideTimePickerDialog() },
             onTimeSelected = { hour, minute ->
-                viewModel.setAlarmTime(hour, minute, timePickerState.isActive)
+                viewModel.setAlarmTime(
+                    timePickerState.alarmType,
+                    hour,
+                    minute,
+                    timePickerState.isActive
+                )
+                viewModel.hideTimePickerDialog()
             }
         )
     }
@@ -110,25 +123,29 @@ fun DeviceScreen(
         deviceMacAddress = device?.macAddress ?: "<без адреса?",
         firmwareVersion = "v1.0.0",
         isOn = isOn,
-        onButtonOnOffClickAction = { viewModel.toggleOnOffCharacteristic() },
+        onSwitchOnOffCheckedChangeAction = { isChecked ->
+            viewModel.toggleOnOffCharacteristic()
+        },
         manualBrightness = manualBrightness,
-        onSliderBrightnessValueChanged = {
-            newValue -> viewModel.setManualBrightnessCharacteristic(newValue.toInt().toByte())
+        onSliderBrightnessValueChanged = { newValue ->
+            viewModel.setManualBrightnessCharacteristic(newValue.toInt().toByte())
         },
         bleTime = bleTime,
         phoneTime = phoneTime,
         onButtonSyncClickAction = { viewModel.syncBleWithPhone() },
         agingOffset = agingOffset,
-        onSpinnerAgingOffsetValueChanged = {
-            newValue -> viewModel.setAgingOffsetCharacteristic(newValue)
+        onAgingOffsetDialogValueChanged = { newValue ->
+            viewModel.setAgingOffsetCharacteristic(newValue)
         },
         rtcTemperature = rtcTemperature,
         turnOnAlarm = turnOnAlarm,
         turnOnAlarmOnTimeClick = {
-            viewModel.showTimePickerDialog(TetrisClockAlarmType.TURN_ON, turnOnAlarm) },
+            viewModel.showTimePickerDialog(TetrisClockAlarmType.TURN_ON, turnOnAlarm)
+        },
         turnOnAlarmOnActiveToggle = {
-            viewModel.toggleAlarmActive(TetrisClockAlarmType.TURN_ON) },
-        turnOffAlarm,
+            viewModel.toggleAlarmActive(TetrisClockAlarmType.TURN_ON)
+        },
+        turnOffAlarm = turnOffAlarm,
         turnOffAlarmOnTimeClick = {
             viewModel.showTimePickerDialog(TetrisClockAlarmType.TURN_OFF, turnOffAlarm)
         },
@@ -147,14 +164,14 @@ fun DeviceSettings(
     deviceMacAddress: String,
     firmwareVersion: String,
     isOn: Boolean,
-    onButtonOnOffClickAction: () -> Unit,
+    onSwitchOnOffCheckedChangeAction: (Boolean) -> Unit,
     manualBrightness: Byte,
     onSliderBrightnessValueChanged: (Float) -> Unit,
     bleTime: TetrisClockTime,
     phoneTime: TetrisClockTime,
     onButtonSyncClickAction: () -> Unit,
     agingOffset: Int,
-    onSpinnerAgingOffsetValueChanged: (Int) -> Unit,
+    onAgingOffsetDialogValueChanged: (Int) -> Unit,
     rtcTemperature: Float,
     turnOnAlarm: TetrisClockAlarm,
     turnOnAlarmOnTimeClick: () -> Unit,
@@ -164,11 +181,12 @@ fun DeviceSettings(
     turnOffAlarmOnActiveToggle: () -> Unit,
     onFirmwareUpdateButtonClickAction: () -> Unit
 ) {
+
     Column(
         modifier = Modifier
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()) // ← Добавляем прокрутку здесь!
+            .verticalScroll(rememberScrollState())
             .systemBarsPadding()
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -179,19 +197,25 @@ fun DeviceSettings(
             firmwareVersion
         )
 
-        Spacer(Modifier.height(20.dp))
+        BrightnessCard(
+            modifier = Modifier,
+            isOn,
+            onSwitchOnOffCheckedChangeAction,
+            manualBrightness,
+            onSliderBrightnessValueChanged,
+        )
 
         TimeSyncCard(
+            modifier = Modifier,
             bleTime,
             phoneTime,
             onButtonSyncClickAction,
             agingOffset,
-            onSpinnerAgingOffsetValueChanged
+            onAgingOffsetDialogValueChanged
         )
 
-        Spacer(Modifier.height(30.dp))
-
-        OnOffAlarms(
+        OnOffScenariosCard(
+            modifier = Modifier,
             turnOnAlarm,
             turnOnAlarmOnTimeClick,
             turnOnAlarmOnActiveToggle,
@@ -200,160 +224,323 @@ fun DeviceSettings(
             turnOffAlarmOnActiveToggle
         )
 
-        Spacer(Modifier.height(20.dp))
-
-        OnOffButton(
-            isOn,
-            onButtonOnOffClickAction,
+        SystemInfoCard(
+            modifier = Modifier,
+            firmwareVersion,
+            onFirmwareUpdateButtonClickAction,
+            rtcTemperature
         )
-
-        Spacer(Modifier.height(30.dp))
-
-        BrightnessSlider(
-            manualBrightness,
-            onSliderBrightnessValueChanged,
-        )
-
-        Spacer(Modifier.height(20.dp))
-
-        FirmwareUpdateButton(
-            onFirmwareUpdateButtonClickAction
-        )
-
-        Spacer(Modifier.height(10.dp))
-
-        RtcTemperature(rtcTemperature)
     }
 }
 
 @Composable
-fun Header(
-    friendlyName: String?,
-    deviceName: String,
-    deviceMacAddress: String,
+fun HeaderCard(
+    friendlyName: String,
+    macAddress: String,
+    firmwareVersion: String,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground
+        )
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = friendlyName ?: deviceName,
-                style = MaterialTheme.typography.headlineLarge,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.weight(1f, fill = false)
-            )
-        }
-
-        Spacer(Modifier.height(5.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Spacer(Modifier.width(15.dp))
-
-            Text(
-                text = deviceName,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+            Icon(
+                imageVector = Icons.Default.Schedule,
+                contentDescription = "Matrix Clock",
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
 
-            Spacer(Modifier.width(40.dp))
+            Spacer(Modifier.height(16.dp))
 
             Text(
-                text = deviceMacAddress,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                text = friendlyName,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+
+            Spacer(Modifier.height(8.dp))
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = macAddress,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+
+                Spacer(Modifier.width(8.dp))
+
+                Text(
+                    text = firmwareVersion,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }
 
 @Composable
-fun OnOffButton (
+fun BrightnessCard(
+    modifier: Modifier,
     isOn: Boolean,
-    onButtonOnOffClickAction: () -> Unit
+    onSwitchOnOffCheckedChangeAction: (Boolean) -> Unit,
+    manualBrightness: Byte,
+    onSliderBrightnessValueChanged: (Float) -> Unit
 ) {
-    Button(
-        onClick = onButtonOnOffClickAction
-    ) {
-        Text(
-            text =
-                if (isOn) stringResource(R.string.mc_manual_turn_off_clock)
-                else stringResource(R.string.mc_manual_turn_on_clock),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onPrimary,
-            textAlign = TextAlign.Center
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
         )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        )
+        {
+            CardTitle(
+                Icons.Default.Brightness6,
+                "${stringResource(R.string.mc_manual_brightness)} ${manualBrightness + 1}",
+                true,
+                isOn,
+                onSwitchOnOffCheckedChangeAction
+            )
+
+            BrightnessSlider(
+                isOn,
+                manualBrightness,
+                onSliderBrightnessValueChanged,
+            )
+        }
     }
 }
 
 @Composable
 fun BrightnessSlider(
+    isOn: Boolean,
     manualBrightness: Byte,
     onSliderBrightnessValueChanged: (Float) -> Unit,
 ) {
-    Text(
-        text = "${stringResource(R.string.mc_manual_brightness)} : ${manualBrightness + 1}",
-        style = MaterialTheme.typography.titleLarge,
-        color = MaterialTheme.colorScheme.primary,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(Modifier.height(10.dp))
-
     Slider(
-
         value = manualBrightness.toFloat(),
         onValueChange = onSliderBrightnessValueChanged,
         valueRange = 0f..15f,
         steps = 14,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp)
-
+            .padding(horizontal = 10.dp),
+        enabled = isOn
     )
 }
 
 @Composable
-fun AgingOffsetSpinner(
-    currentValue: Int,
-    onSpinnerAgingOffsetValueChanged: (Int) -> Unit,
-    modifier: Modifier = Modifier
+fun TimeSyncCard(
+    modifier: Modifier = Modifier,
+    bleTime: TetrisClockTime,
+    phoneTime: TetrisClockTime,
+    onButtonSyncClickAction: () -> Unit,
+    agingOffset: Int,
+    onAgingOffsetDialogValueChanged: (Int) -> Unit,
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showAgingOffsetDialog by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
     ) {
-       Box(
+        Column(
             modifier = Modifier
-                .clickable { showDialog = true }
-                .padding(8.dp),
-            contentAlignment = Alignment.Center
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                    text = "${stringResource(R.string.mc_aging_offset)}: ${if (currentValue > 0) "+" else ""
-                    }${ "%.2f".format(currentValue * 0.1)} ${stringResource(R.string.mc_ppm)}",
-           style = MaterialTheme.typography.bodyLarge,
-           color = MaterialTheme.colorScheme.primary
-           )
+            CardTitle(
+                Icons.Default.Adjust,
+                "Точность хода")
+
+            // Карточки времени в строку
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                TimeCard(
+                    title = stringResource(R.string.mc_time_of_tetris_clock),
+                    time = bleTime,
+                    modifier = Modifier.weight(1f)
+                )
+
+                TimeCard(
+                    title = stringResource(R.string.mc_time_of_mobile_phone),
+                    time = phoneTime,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            CardButtonWide(
+                Icons.Default.SwapCalls,
+                stringResource(R.string.mc_aging_offset),
+                { showAgingOffsetDialog = true},
+                false
+            )
+
+            AgingOffsetDialog(
+                agingOffset,
+                showAgingOffsetDialog,
+                onDismiss = { showAgingOffsetDialog = false },
+                onValueConfirmed = { newValue ->
+                    showAgingOffsetDialog = false
+                    onAgingOffsetDialogValueChanged(newValue)
+                }
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            CardButtonWide(
+                Icons.Default.Sync,
+                stringResource(R.string.mc_action_synchronize_time),
+                onButtonSyncClickAction,
+                true
+            )
         }
     }
+}
 
-    // Диалог для ручного ввода
+@Composable
+fun TimeCard(
+    title: String,
+    time: TetrisClockTime,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor =MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.outline
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = time.formatTimeHours(),
+                    style = MaterialTheme.typography.timeHeadlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = ":",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = time.formatTimeMinutes(),
+                    style = MaterialTheme.typography.timeHeadlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = ":",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = time.formatTimeSeconds(),
+                    style = MaterialTheme.typography.timeHeadlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = time.formatDayAndMonth(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                text = time.formatYear(),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
+    }
+}
+
+@Composable
+fun AgingOffsetDialog(
+    currentValue: Int,
+    showDialog: Boolean,
+    onDismiss: () -> Unit,
+    onValueConfirmed: (Int) -> Unit
+) {
     if (showDialog) {
         var inputValue by remember(currentValue) { mutableStateOf(currentValue.toString()) }
 
         AlertDialog(
-            onDismissRequest = { showDialog = false },
             title = { Text(stringResource( R.string.mc_dialog_set_aging_offset)) },
             text = {
                 Column()
@@ -372,19 +559,19 @@ fun AgingOffsetSpinner(
                     )
                 }
             },
+            onDismissRequest = onDismiss,
             confirmButton = {
                 Button(
                     onClick = {
                         val newValue = inputValue.toIntOrNull()?.coerceIn(-128..127)
-                        newValue?.let { onSpinnerAgingOffsetValueChanged(it) }
-                        showDialog = false
+                        newValue?.let { onValueConfirmed(it) }
                     }
                 ) {
                     Text(stringResource(R.string.mc_dialog_ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDialog = false }) {
+                TextButton(onClick = onDismiss) {
                     Text(stringResource(R.string.mc_dialog_cancel))
                 }
             }
@@ -393,31 +580,19 @@ fun AgingOffsetSpinner(
 }
 
 @Composable
-fun RtcTemperature(
-    rtcTemperature: Float
-) {
-    Text(
-        text = "${stringResource(R.string.mc_rtc_temperature)}: ${if (rtcTemperature > 0) "+" else ""
-        }${"%.2f".format(rtcTemperature)} ${stringResource(R.string.mc_degrees_celsius)}",
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.primary
-    )
-}
-
-@Composable
-fun TimeSyncCard(
-    bleTime: TetrisClockTime,
-    phoneTime: TetrisClockTime,
-    onSyncClick: () -> Unit,
-    agingOffset: Int,
-    onSpinnerAgingOffsetValueChanged: (Int) -> Unit,
-    modifier: Modifier = Modifier
+fun OnOffScenariosCard(
+    modifier: Modifier,
+    turnOnAlarm: TetrisClockAlarm,
+    turnOnAlarmOnTimeClick: () -> Unit,
+    turnOnAlarmOnActiveToggle: () -> Unit,
+    turnOffAlarm: TetrisClockAlarm,
+    turnOffAlarmOnTimeClick: () -> Unit,
+    turnOffAlarmOnActiveToggle: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(24.dp),
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp),
+            .padding(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
@@ -426,114 +601,152 @@ fun TimeSyncCard(
     ) {
         Column(
             modifier = Modifier
-                .padding(start = 12.dp,top = 12.dp, end = 12.dp, bottom = 0.dp )
+                .padding(16.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Карточки времени в строку
+        )
+        {
+            CardTitle(
+                Icons.Default.Timelapse,
+                "Сценарии")
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                TimeCard(
-                    title = stringResource(R.string.mc_time_of_tetris_clock),
-                    time = bleTime,
-                    modifier = Modifier.weight(1f)
+                AlarmItem(
+                    modifier = Modifier.weight(1f),
+                    labelTop = "Авто", // = stringResource(R.string.mc_check_auto_on),
+                    labelBottom = "ВКЛ",
+                    alarm = turnOnAlarm,
+                    onTimeClick = turnOnAlarmOnTimeClick,
+                    onActiveToggle = turnOnAlarmOnActiveToggle
                 )
-
-                TimeCard(
-                    title = stringResource(R.string.mc_time_of_mobile_phone),
-                    time = phoneTime,
-                    modifier = Modifier.weight(1f)
+                AlarmItem(
+                    modifier = Modifier.weight(1f),
+                    labelTop = "Авто", // stringResource(R.string.mc_check_auto_off),
+                    labelBottom = "ВЫКЛ",
+                    alarm = turnOffAlarm,
+                    onTimeClick = turnOffAlarmOnTimeClick,
+                    onActiveToggle = turnOffAlarmOnActiveToggle
                 )
             }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Кнопка синхронизации
-            Button(
-                onClick = onSyncClick,
-                modifier = Modifier
-                    .padding(start = 8.dp, top = 0.dp, end = 8.dp, bottom = 12.dp)
-                    .fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Sync,
-                    contentDescription = "Sync",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.mc_action_synchronize_time),
-                    style = MaterialTheme.typography.titleSmall
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Button(
-                onClick = onSyncClick,
-                modifier = Modifier
-                    .padding(start = 8.dp, top = 0.dp, end = 8.dp, bottom = 12.dp)
-                    .fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Sync,
-                    contentDescription = "Sync",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.mc_action_synchronize_time),
-                    style = MaterialTheme.typography.titleSmall
-                )
-            }
-
-            AgingOffsetSpinner(
-                agingOffset,
-                onSpinnerAgingOffsetValueChanged
-            )
         }
     }
 }
 
 @Composable
-fun TimeBlock(
-    header: String,
-    time: TetrisClockTime,
-    modifier: Modifier
+fun AlarmItem(
+    modifier: Modifier = Modifier,
+    labelTop: String,
+    labelBottom: String,
+    alarm: TetrisClockAlarm,
+    onTimeClick: () -> Unit,
+    onActiveToggle: () -> Unit
 ) {
-    Column (
+    val color = if (alarm.isActive) MaterialTheme.colorScheme.primary
+    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    Card(
         modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-
-        Text(
-            text = header,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
 
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                Column {
+                    Text(
+                        text = labelTop,
+                        color = color,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold)
+
+                    Text(
+                        text = labelBottom,
+                        color = color,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold)
+                }
+
+                Switch(
+                    checked = alarm.isActive,
+                    onCheckedChange = {
+                            _ -> onActiveToggle()
+                    }
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            AlarmTimeField(
+                alarm.hours,
+                alarm.minutes,
+                isActive = alarm.isActive,
+                onFieldClick = onTimeClick
+            )
+        }
+
+    }
+}
+
+@Composable
+fun AlarmTimeField(
+    alarmHours: Byte,
+    alarmMinutes: Byte,
+    isActive: Boolean,
+    onFieldClick: () -> Unit
+) {
+    val color = if (isActive) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = isActive,
+                onClick = onFieldClick
+            )
+            .border(
+                width = 1.dp,
+                color = color,
+                shape = MaterialTheme.shapes.medium
+            )
+            .padding(16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+        ) {
             Text(
-                text = time.formatTime(),
-                style = MaterialTheme.typography.headlineLarge,
-                color = MaterialTheme.colorScheme.primary
+                text = "%02d".format(alarmHours),
+                style = MaterialTheme.typography.timeHeadlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
             )
             Text(
-                text = time.formatDate(),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                text = ":",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                text = "%02d".format(alarmMinutes),
+                style = MaterialTheme.typography.timeHeadlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
             )
         }
     }
@@ -557,6 +770,7 @@ fun TimePickerDialog(
             TextButton(
                 onClick = {
                     onTimeSelected(timePickerState.hour, timePickerState.minute)
+                    onDismiss()
                 }
             ) {
                 Text(text = stringResource(R.string.mc_dialog_ok))
@@ -575,154 +789,155 @@ fun TimePickerDialog(
 }
 
 @Composable
-fun OnOffAlarms(
-    turnOnAlarm: TetrisClockAlarm,
-    turnOnAlarmOnTimeClick: () -> Unit,
-    turnOnAlarmOnActiveToggle: () -> Unit,
-    turnOffAlarm: TetrisClockAlarm,
-    turnOffAlarmOnTimeClick: () -> Unit,
-    turnOffAlarmOnActiveToggle: () -> Unit)
-{
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                AlarmItem(
-                    label = stringResource(R.string.mc_check_auto_on),
-                    alarm = turnOnAlarm,
-                    onTimeClick = turnOnAlarmOnTimeClick,
-                    onActiveToggle = turnOnAlarmOnActiveToggle
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                AlarmItem(
-                    label = stringResource(R.string.mc_check_auto_off),
-                    alarm = turnOffAlarm,
-                    onTimeClick = turnOffAlarmOnTimeClick,
-                    onActiveToggle = turnOffAlarmOnActiveToggle
-                )
-            }
+fun SystemInfoCard(
+    modifier: Modifier,
+    firmwareVersion: String,
+    onFirmwareUpdateButtonClickAction: () -> Unit,
+    rtcTemperature: Float
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        )
+        {
+            CardTitle(
+                Icons.Default.PermDeviceInformation,
+                "Система"
+            )
+
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = "${stringResource(R.string.mc_rtc_temperature)}: ${
+                    if (rtcTemperature > 0) "+" else ""
+                }${"%.2f".format(rtcTemperature)} ${stringResource(R.string.mc_degrees_celsius)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = "Версия прошивки часов: " + firmwareVersion,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(Modifier.width(16.dp))
+
+            CardButtonWide(
+                Icons.Default.SystemUpdateAlt,
+                "Обновление прошивки",
+                onFirmwareUpdateButtonClickAction,
+                false
+            )
         }
     }
 }
 
 @Composable
-fun AlarmItem(
-    label: String,
-    alarm: TetrisClockAlarm,
-    onTimeClick: () -> Unit,
-    onActiveToggle: () -> Unit
+fun CardTitle(
+    imageVector: ImageVector,
+    text: String,
+    showSwitch: Boolean = false,
+    isOn: Boolean = false,
+    onCheckedChange: (Boolean) -> Unit = {}
 ) {
-    Column(
-        modifier = Modifier.padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
+    Row (
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    )
+    {
+        Row (
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = label,
-                color = if (alarm.isActive) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+            Icon(
+                imageVector = imageVector,
+                contentDescription = text,
+                tint = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.size(28.dp)
             )
-            Switch(
-                checked = alarm.isActive,
-                onCheckedChange = { onActiveToggle() }
+
+            Spacer(Modifier.width(8.dp))
+
+            Text(
+                color = MaterialTheme.colorScheme.outline,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                text = text
             )
         }
 
-        AlarmTimeField(
-            time = String.format("%02d:%02d", alarm.hours, alarm.minutes),
-            isActive = alarm.isActive,
-            onFieldClick = onTimeClick
+        if(showSwitch)
+        {
+            Switch(
+                checked = isOn,
+                onCheckedChange = onCheckedChange
+            )
+        }
+    }
+
+    Spacer(Modifier.height(16.dp))
+}
+
+@Composable
+fun CardButtonWide(
+    imageVector: ImageVector,
+    text: String,
+    onClickAction: () -> Unit,
+    isPrimary: Boolean = false
+) {
+    val containerColor =
+        if (isPrimary)  MaterialTheme.colorScheme.primary
+        else  MaterialTheme.colorScheme.surfaceVariant
+
+    val contentColor =
+        if (isPrimary)  MaterialTheme.colorScheme.onPrimary
+        else  MaterialTheme.colorScheme.onSurfaceVariant
+
+    Button(
+        onClick = onClickAction,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier
+            .fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+    ) {
+        Icon(
+            imageVector = imageVector,
+            contentDescription = text,
+            modifier = Modifier.size(24.dp)
+        )
+
+        Spacer(Modifier.width(8.dp))
+
+        Text(
+            text = text,
+            style = MaterialTheme.typography.titleMedium
         )
     }
 }
 
 @Composable
-fun AlarmTimeField(
-    time: String,
-    isActive: Boolean,
-    onFieldClick: () -> Unit
-) {
-    val borderColor = if (isActive) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-    }
-
-    val textColor = if (isActive) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                enabled = isActive,
-                onClick = onFieldClick
-            )
-            .border(
-                width = 1.dp,
-                color = borderColor,
-                shape = MaterialTheme.shapes.medium
-            )
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = time,
-                color = if (isActive) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                style = MaterialTheme.typography.headlineLarge
-            )
-
-            Icon(
-                imageVector = Icons.Default.Timelapse,
-                contentDescription = stringResource(R.string.mc_action_set_time),
-                tint = if (isActive) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            )
-        }
-    }
-}
-
-@Composable
-fun FirmwareUpdateButton(
-    onButtonClick: () -> Unit
-) {
-    Button(
-        onClick = onButtonClick,
-        modifier = Modifier.padding(16.dp)
-    ) {
-        Text("Обновление прошивки устройства")
-    }
-}
-
-@Composable
 @Preview(
-    name = "State 1: Device ON",
-    showBackground = true
+    name = "State 1: Light Theme",
+    showBackground = true,
+    heightDp = 1200
 )
 fun DeviceSettings_State1_Preview(){
     TetrisClockBLETheme (
@@ -743,9 +958,9 @@ fun DeviceSettings_State1_Preview(){
                     .minusSeconds(1)
             ),
             phoneTime = TetrisClockTime(LocalDateTime.now()),
-            onButtonOnOffClickAction = {},
+            onSwitchOnOffCheckedChangeAction = {},
             agingOffset = 5,
-            onSpinnerAgingOffsetValueChanged = {},
+            onAgingOffsetDialogValueChanged = {},
             rtcTemperature = 21.25F,
             turnOnAlarm = TetrisClockAlarm(
                 isActive = true,
@@ -766,8 +981,9 @@ fun DeviceSettings_State1_Preview(){
 
 @Composable
 @Preview(
-    name = "State 2: Device OFF",
-    showBackground = true)
+    name = "State 2: Dark Theme",
+    showBackground = true,
+    heightDp = 1200)
 fun DeviceSettings_State2_Preview(){
     TetrisClockBLETheme (
         darkTheme = true
@@ -787,9 +1003,9 @@ fun DeviceSettings_State2_Preview(){
                     .minusSeconds(1)
             ),
             phoneTime = TetrisClockTime(LocalDateTime.now()),
-            onButtonOnOffClickAction = {},
+            onSwitchOnOffCheckedChangeAction = {},
             agingOffset = -108,
-            onSpinnerAgingOffsetValueChanged = {},
+            onAgingOffsetDialogValueChanged = {},
             rtcTemperature = -10.25F,
             turnOnAlarm = TetrisClockAlarm(
                 isActive = false,
@@ -805,130 +1021,5 @@ fun DeviceSettings_State2_Preview(){
             turnOffAlarmOnActiveToggle = {},
             onFirmwareUpdateButtonClickAction = {}
         )
-    }
-}
-
-@Composable
-fun HeaderCard(
-    friendlyName: String,
-    macAddress: String,
-    firmwareVersion: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.onBackground
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Иконка устройства
-            Icon(
-                imageVector = Icons.Default.Schedule,
-                contentDescription = "Matrix Clock",
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            // Название устройства
-            Text(
-                text = friendlyName,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Детали устройства
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = macAddress,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = firmwareVersion,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun TimeCard(
-    title: String,
-    time: TetrisClockTime,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-        .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Заголовок карточки
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            // Время крупно
-            Text(
-                text = time.formatTime(),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            // Дата под временем
-            Text(
-                text = time.formatDate(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
-        }
     }
 }

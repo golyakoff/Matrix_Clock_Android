@@ -29,19 +29,7 @@ class DeviceRepository() {
         TetrisClockDevice(
             deviceName = "Matrix Clock 3",
             macAddress = "11:22:33:44:55:bd",
-        ),
-        TetrisClockDevice(
-            deviceName = "Matrix Clock 4",
-            macAddress = "11:22:33:44:55:ff"
-        ),
-        TetrisClockDevice(
-            deviceName = "Matrix Clock 5",
-            macAddress = "11:22:33:44:55:da"
-        ),
-        TetrisClockDevice(
-            deviceName = "Matrix Clock 6",
-            macAddress = "11:22:33:44:55:da"
-        ),
+        )
     )
 
     fun getDeviceList(): List<TetrisClockDevice> {
