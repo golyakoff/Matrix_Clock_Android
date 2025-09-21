@@ -6,6 +6,9 @@ import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.ScrollCaptureCallback
+import android.view.ScrollCaptureSession
+import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,19 +20,52 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import net.agolyakov.tetrisclockble.navigation.SetupNavGraph
-import net.agolyakov.tetrisclockble.screen.MyRequestPermission
+import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
+import net.agolyakov.tetrisclockble.ui.viewmodel.MyRequestPermission
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject
+    lateinit var bluetoothService: BluetoothService
 
     @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Включение ScrollCapture для скриншотов с прокруткой (Android 12+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            enableScrollCapture()
+        }
+
         setContent {
             MainContent()
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun enableScrollCapture() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.decorView.setScrollCaptureHint(View.SCROLL_CAPTURE_HINT_INCLUDE)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (!bluetoothService.shouldPreserveConnection()) {
+            bluetoothService.disconnect()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        bluetoothService.tryReconnect()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        bluetoothService.disconnect()
     }
 }
 
@@ -70,19 +106,17 @@ fun MainContent() {
         // Навигация
         SetupNavGraph(navController = navController)
     }
+}
 
-    fun getBlePermissions(): List<String> {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Android 12+ (API 31+)
-            listOf(
-                android.Manifest.permission.BLUETOOTH_SCAN,
-                android.Manifest.permission.BLUETOOTH_CONNECT
-            )
-        } else {
-            // Android 6 – Android 11
-            listOf(
-                android.Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        }
+fun getBlePermissions(): List<String> {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT
+        )
+    } else {
+        listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
     }
 }
