@@ -3,23 +3,24 @@ package net.agolyakov.tetrisclockble.ui.screen.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.navigation.Screen
@@ -30,9 +31,10 @@ fun HomeScreen(
     navController: NavHostController,
     homeViewModel: HomeViewModel
 ) {
-    // for getting list if no devices are nearby
-    // val devices = homeViewModel.getDeviceRepository().getDeviceList()
     val devices by homeViewModel.devices.observeAsState(emptyList())
+
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var deviceToRename by remember { mutableStateOf<TetrisClockDevice?>(null) }
 
     Box(
         modifier = Modifier
@@ -41,25 +43,49 @@ fun HomeScreen(
             .systemBarsPadding(),
         contentAlignment = Alignment.TopCenter
     ) {
-        DeviceList(devices , navController)
+        DeviceList(devices, navController, onRenameClick = { device ->
+            deviceToRename = device
+            showRenameDialog = true
+        })
+    }
+
+    if (showRenameDialog && deviceToRename != null) {
+        RenameDeviceDialog(
+            device = deviceToRename!!,
+            onDismiss = {
+                showRenameDialog = false
+                deviceToRename = null
+            },
+            onRename = { newName ->
+                homeViewModel.renameDevice(deviceToRename!!.macAddress, newName)
+            }
+        )
     }
 }
 
 @Composable
-fun DeviceList(deviceList: List<TetrisClockDevice>, navController: NavHostController) {
+fun DeviceList(
+    deviceList: List<TetrisClockDevice>,
+    navController: NavHostController,
+    onRenameClick: (TetrisClockDevice) -> Unit
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        itemsIndexed(deviceList) {
-            _, item -> Device(item, navController)
+        itemsIndexed(deviceList) { _, item ->
+            Device(item, navController, onRenameClick)
         }
     }
 }
 
 @Composable
-fun Device(device: TetrisClockDevice, navController: NavHostController) {
+fun Device(
+    device: TetrisClockDevice,
+    navController: NavHostController,
+    onRenameClick: (TetrisClockDevice) -> Unit
+) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -85,60 +111,98 @@ fun Device(device: TetrisClockDevice, navController: NavHostController) {
                 Icons.Outlined.AccessTime,
                 tint = MaterialTheme.colorScheme.primary,
                 contentDescription = "Настроить",
-                modifier = Modifier
-                    .size(48.dp)
+                modifier = Modifier.size(48.dp)
             )
 
             Spacer(Modifier.width(16.dp))
 
             Column(
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.weight(1f)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    Text(
-                        modifier = Modifier,
-                        text = device.friendlyName ?: device.deviceName,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        overflow = TextOverflow.Ellipsis,
-                        maxLines = 1,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Text(
+                    text = device.getDisplayName(),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.primary
+                )
                 Text(
                     text = device.macAddress,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.outline
                 )
+            }
 
+            IconButton(
+                onClick = { onRenameClick(device) },
+                modifier = Modifier.size(48.dp)
+            ) {
+                Icon(
+                    Icons.Outlined.Edit,
+                    contentDescription = stringResource(R.string.mc_rename),
+                    tint = MaterialTheme.colorScheme.secondary
+                )
             }
         }
     }
 }
 
 @Composable
-@Preview(
-    name = "Light Schema",
-    heightDp = 800,
-    showBackground = false)
+fun RenameDeviceDialog(
+    device: TetrisClockDevice,
+    onDismiss: () -> Unit,
+    onRename: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(device.friendlyName ?: device.deviceName) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.mc_rename_device)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text(stringResource(R.string.mc_dialog_device_name)) },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (text.isNotBlank()) {
+                        onRename(text)
+                    } else {
+                        onRename("")
+                    }
+                    onDismiss()
+                }
+            ) {
+                Text(stringResource(R.string.mc_dialog_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.mc_dialog_cancel))
+            }
+        }
+    )
+}
+
+@Composable
+@Preview(name = "Light Schema", heightDp = 800, showBackground = false)
 fun DeviceListPreview_1() {
     TetrisClockBLETheme(darkTheme = false) {
         val deviceList = DeviceRepository().getDeviceList()
-        DeviceList(deviceList, rememberNavController())
+        DeviceList(deviceList, rememberNavController()) {}
     }
 }
 
 @Composable
-@Preview(
-    name = "Dark Schema",
-    heightDp = 800,
-    showBackground = true)
+@Preview(name = "Dark Schema", heightDp = 800, showBackground = true)
 fun DeviceListPreview_2() {
     TetrisClockBLETheme(darkTheme = true) {
         val deviceList = DeviceRepository().getDeviceList()
-        DeviceList(deviceList, rememberNavController())
+        DeviceList(deviceList, rememberNavController()) {}
     }
 }
