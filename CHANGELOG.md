@@ -1,3 +1,11 @@
+# Release 1.2.0
+
+- [x] Added the hourly brightness schedule: 24 per-hour brightness levels, edited in a dialog on the Device screen and stored on the clock (requires firmware v1.1.2 or newer)
+- [x] Reworked the brightness card: the matrix on/off switch is no longer attached to the "Яркость" title but has its own "Табло Вкл/Выкл" row, and "Автояркость" now shows the level the schedule holds for the current hour
+- [x] The manual brightness slider is disabled while auto brightness is on, since the clock follows the schedule then
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.1.0...v1.2.0
+
 # Release 1.1.0
 
 - [x] Fixed a hardcoded, now GitHub-revoked personal access token that broke firmware update checks (401 errors, apparent hang) after the ESP32 firmware repo went public - GitHub API calls no longer send any auth token
