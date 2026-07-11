@@ -21,6 +21,9 @@ data class TetrisClockHourlyBrightness(
         }
     }
 
+    fun valueForHour(hour: Int): Int =
+        values.getOrElse(hour.mod(HOURS)) { MIN_VALUE }.coerceIn(MIN_VALUE, MAX_VALUE)
+
     fun toByteArray(): ByteArray =
         ByteArray(HOURS) { hour ->
             values.getOrElse(hour) { MIN_VALUE }.coerceIn(MIN_VALUE, MAX_VALUE).toByte()

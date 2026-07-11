@@ -3,8 +3,9 @@
     <string name="app_full_name">Часы-тетрис | Bluetooth LE клиент</string>
     <string name="mc_manual_turn_on_clock">Включить часы</string>
     <string name="mc_manual_turn_off_clock">Выключить часы</string>
+    <string name="mc_matrix_power">Табло Вкл/Выкл</string>
     <string name="mc_manual_brightness">Яркость</string>
-    <string name="mc_auto_brightness">Авто яркость</string>
+    <string name="mc_auto_brightness">Автояркость</string>
     <string name="mc_hourly_brightness">Расписание яркости</string>
     <string name="mc_hourly_brightness_dialog_title">Яркость по часам</string>
     <string name="mc_hourly_brightness_disabled_tip">Расписание применяется только при включённой автояркости</string>

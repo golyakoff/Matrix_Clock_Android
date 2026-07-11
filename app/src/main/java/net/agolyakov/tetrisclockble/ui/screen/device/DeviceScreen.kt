@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.PermDeviceInformation
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapCalls
 import androidx.compose.material.icons.filled.Sync
@@ -225,6 +226,7 @@ fun DeviceSettings(
             onAutoBrightnessCheckedChangeAction,
             hourlyBrightness,
             onHourlyBrightnessConfirmed,
+            currentHour = bleTime.localDateTime.hour,
         )
 
         TimeSyncCard(
@@ -318,7 +320,8 @@ fun BrightnessCard(
     isAutoBrightness: Boolean,
     onAutoBrightnessCheckedChangeAction: (Boolean) -> Unit,
     hourlyBrightness: TetrisClockHourlyBrightness,
-    onHourlyBrightnessConfirmed: (TetrisClockHourlyBrightness) -> Unit
+    onHourlyBrightnessConfirmed: (TetrisClockHourlyBrightness) -> Unit,
+    currentHour: Int
 ) {
     var showHourlyBrightnessDialog by remember { mutableStateOf(false) }
 
@@ -340,15 +343,21 @@ fun BrightnessCard(
         )
         {
             CardTitle(
-                Icons.Default.Brightness6,
-                "${stringResource(R.string.mc_manual_brightness)} ${manualBrightness + 1}",
+                Icons.Default.PowerSettingsNew,
+                stringResource(R.string.mc_matrix_power),
                 true,
                 isOn,
                 onSwitchOnOffCheckedChangeAction
             )
 
+            CardTitle(
+                Icons.Default.Brightness6,
+                "${stringResource(R.string.mc_manual_brightness)} ${manualBrightness + 1}"
+            )
+
+            // The manual value is ignored by the clock while the hourly schedule drives the brightness.
             BrightnessSlider(
-                isOn,
+                isOn && !isAutoBrightness,
                 manualBrightness,
                 onSliderBrightnessValueChanged,
             )
@@ -357,7 +366,7 @@ fun BrightnessCard(
 
             CardTitle(
                 Icons.Default.BrightnessAuto,
-                stringResource(R.string.mc_auto_brightness),
+                "${stringResource(R.string.mc_auto_brightness)} ${hourlyBrightness.valueForHour(currentHour) + 1}",
                 true,
                 isAutoBrightness,
                 onAutoBrightnessCheckedChangeAction
@@ -465,7 +474,7 @@ fun HourlyBrightnessDialog(
 
 @Composable
 fun BrightnessSlider(
-    isOn: Boolean,
+    enabled: Boolean,
     manualBrightness: Byte,
     onSliderBrightnessValueChanged: (Float) -> Unit,
 ) {
@@ -477,7 +486,7 @@ fun BrightnessSlider(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp),
-        enabled = isOn
+        enabled = enabled
     )
 }
 
