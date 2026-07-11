@@ -15,11 +15,12 @@ import net.agolyakov.tetrisclockble.domain.usecase.LoadDeviceWithNameUseCase
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothAdapterProvider
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
 import net.agolyakov.tetrisclockble.data.remote.api.GithubApiService
-import net.agolyakov.tetrisclockble.data.remote.interceptors.AuthInterceptor
+import net.agolyakov.tetrisclockble.data.remote.interceptors.GitHubRequestInterceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -27,9 +28,6 @@ import javax.inject.Singleton
 object MainModule {
     private val owner = "golyakoff"
     private val repo = "Matrix_Clock_ESP32"
-
-    // TODO: Заменить на получение из безопасного хранилища
-    private val token = "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"
 
     // Region: Context Providers
     @Provides
@@ -65,22 +63,19 @@ object MainModule {
     // Region: Network
     @Provides
     @Singleton
-    fun provideGitHubToken(): String {
-        return token
-    }
-
-    @Provides
-    @Singleton
-    fun provideAuthInterceptor(token: String): AuthInterceptor {
-        return AuthInterceptor(token)
+    fun provideGitHubRequestInterceptor(): GitHubRequestInterceptor {
+        return GitHubRequestInterceptor()
     }
 
     @Provides
     @Singleton
     fun provideOkHttpClient(
-        authInterceptor: AuthInterceptor
+        gitHubRequestInterceptor: GitHubRequestInterceptor
     ): OkHttpClient = OkHttpClient.Builder()
-        .addInterceptor(authInterceptor)
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .callTimeout(15, TimeUnit.SECONDS)
+        .addInterceptor(gitHubRequestInterceptor)
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BASIC
         })

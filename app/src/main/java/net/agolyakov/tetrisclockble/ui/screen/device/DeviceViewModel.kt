@@ -62,6 +62,7 @@ class DeviceViewModel @Inject constructor(
         _isEditing.value = false
     }
 
+    val tetrisClockFirmwareVersion = bluetoothService.tetrisClockFirmwareVersion
     var tetrisClockBleDeviceTime = bluetoothService.tetrisClockBleDeviceTime
     val tetrisClockTetrisOn = bluetoothService.tetrisClockIsOn
     val tetrisClockManualBrightness = bluetoothService.tetrisClockManualBrightness

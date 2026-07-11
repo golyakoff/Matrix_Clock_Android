@@ -82,6 +82,7 @@ fun DeviceScreen(
     device: TetrisClockDevice?
 ) {
     val viewModel: DeviceViewModel = hiltViewModel()
+    val firmwareVersion: String by viewModel.tetrisClockFirmwareVersion.collectAsState()
     val isOn: Boolean by viewModel.tetrisClockTetrisOn.collectAsState()
     val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
     val bleTime: TetrisClockTime by viewModel.tetrisClockBleDeviceTime.collectAsState()
@@ -121,7 +122,7 @@ fun DeviceScreen(
     DeviceSettings(
         deviceFriendlyName = device?.friendlyName ?: device?.deviceName ?: "<без имени>",
         deviceMacAddress = device?.macAddress ?: "<без адреса?",
-        firmwareVersion = "v1.0.0",
+        firmwareVersion = firmwareVersion,
         isOn = isOn,
         onSwitchOnOffCheckedChangeAction = { isChecked ->
             viewModel.toggleOnOffCharacteristic()

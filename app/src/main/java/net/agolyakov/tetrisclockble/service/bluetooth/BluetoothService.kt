@@ -185,12 +185,47 @@ class BluetoothService @Inject constructor(
         bleManager.connectionObserver = connectionObserver
     }
 
+    // Resets all cached characteristic values back to their defaults.
+    // Without this, a value read from a previously connected device (e.g. its
+    // firmware version) would keep showing on screen for a device that doesn't
+    // support that characteristic, since a failed/unsupported read never overwrites it.
+    private fun resetDeviceState() {
+        _firmwareVersion = "Unknown"
+        _tetrisClockFirmwareVersion.value = _firmwareVersion
+
+        _bleDeviceTime = TetrisClockTime()
+        _tetrisClockBleDeviceTime.value = _bleDeviceTime
+
+        _onOffState = true
+        _tetrisClockIsOn.value = _onOffState
+
+        _manualBrightnessState = 0
+        _tetrisClockManualBrightness.value = _manualBrightnessState
+
+        _isAutoBrightness = false
+        _tetrisClockIsAutoBrightness.value = _isAutoBrightness
+
+        _turnOnAlarm = TetrisClockAlarm()
+        _tetrisClockTurnOnAlarm.value = _turnOnAlarm
+
+        _turnOffAlarm = TetrisClockAlarm()
+        _tetrisClockTurnOffAlarm.value = _turnOffAlarm
+
+        _agingOffsetState = 0
+        _tetrisClockAgingOffset.value = _agingOffsetState
+
+        _rtcTemperatureState = Float.NaN
+        _tetrisClockRtcTemperature.value = _rtcTemperatureState
+    }
+
     fun connect(tetrisClockDevice: TetrisClockDevice) {
         if (_connectionState.value is ConnectionState.Connecting ||
             _connectionState.value is ConnectionState.Connected) {
             Log.w(_tag, "Already connecting/connected, ignoring new connection request")
             return
         }
+
+        resetDeviceState()
 
         _connectionState.value = ConnectionState.Connecting
         val device = bluetoothAdapterProvider.getAdapter().getRemoteDevice(tetrisClockDevice.macAddress)
