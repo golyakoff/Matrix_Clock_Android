@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -23,7 +24,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Adjust
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.PermDeviceInformation
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapCalls
@@ -67,9 +70,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.R
+import net.agolyakov.tetrisclockble.navigation.Screen
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
+import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.ui.component.TimePickerDialogState
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
 import net.agolyakov.tetrisclockble.ui.theme.timeHeadlineMedium
@@ -84,6 +89,8 @@ fun DeviceScreen(
     val firmwareVersion: String by viewModel.tetrisClockFirmwareVersion.collectAsState()
     val isOn: Boolean by viewModel.tetrisClockTetrisOn.collectAsState()
     val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
+    val isAutoBrightness: Boolean by viewModel.tetrisClockIsAutoBrightness.collectAsState()
+    val hourlyBrightness: TetrisClockHourlyBrightness by viewModel.tetrisClockHourlyBrightness.collectAsState()
     val bleTime: TetrisClockTime by viewModel.tetrisClockBleDeviceTime.collectAsState()
     var phoneTime: TetrisClockTime by remember { mutableStateOf(TetrisClockTime.now()) }
     val timePickerState: TimePickerDialogState by viewModel.timePickerState.collectAsState()
@@ -130,6 +137,14 @@ fun DeviceScreen(
         onSliderBrightnessValueChanged = { newValue ->
             viewModel.setManualBrightnessCharacteristic(newValue.toInt().toByte())
         },
+        isAutoBrightness = isAutoBrightness,
+        onAutoBrightnessCheckedChangeAction = {
+            viewModel.toggleAutoBrightnessCharacteristic()
+        },
+        hourlyBrightness = hourlyBrightness,
+        onHourlyBrightnessConfirmed = { newValue ->
+            viewModel.setHourlyBrightnessCharacteristic(newValue)
+        },
         bleTime = bleTime,
         phoneTime = phoneTime,
         onButtonSyncClickAction = { viewModel.syncBleWithPhone() },
@@ -153,7 +168,7 @@ fun DeviceScreen(
             viewModel.toggleAlarmActive(TetrisClockAlarmType.TURN_OFF)
         },
         onFirmwareUpdateButtonClickAction = {
-            navController.navigate("firmware_update")
+            navController.navigate(Screen.Firmware.route)
         }
     )
 }
@@ -167,6 +182,10 @@ fun DeviceSettings(
     onSwitchOnOffCheckedChangeAction: (Boolean) -> Unit,
     manualBrightness: Byte,
     onSliderBrightnessValueChanged: (Float) -> Unit,
+    isAutoBrightness: Boolean,
+    onAutoBrightnessCheckedChangeAction: (Boolean) -> Unit,
+    hourlyBrightness: TetrisClockHourlyBrightness,
+    onHourlyBrightnessConfirmed: (TetrisClockHourlyBrightness) -> Unit,
     bleTime: TetrisClockTime,
     phoneTime: TetrisClockTime,
     onButtonSyncClickAction: () -> Unit,
@@ -202,6 +221,10 @@ fun DeviceSettings(
             onSwitchOnOffCheckedChangeAction,
             manualBrightness,
             onSliderBrightnessValueChanged,
+            isAutoBrightness,
+            onAutoBrightnessCheckedChangeAction,
+            hourlyBrightness,
+            onHourlyBrightnessConfirmed,
         )
 
         TimeSyncCard(
@@ -291,8 +314,14 @@ fun BrightnessCard(
     isOn: Boolean,
     onSwitchOnOffCheckedChangeAction: (Boolean) -> Unit,
     manualBrightness: Byte,
-    onSliderBrightnessValueChanged: (Float) -> Unit
+    onSliderBrightnessValueChanged: (Float) -> Unit,
+    isAutoBrightness: Boolean,
+    onAutoBrightnessCheckedChangeAction: (Boolean) -> Unit,
+    hourlyBrightness: TetrisClockHourlyBrightness,
+    onHourlyBrightnessConfirmed: (TetrisClockHourlyBrightness) -> Unit
 ) {
+    var showHourlyBrightnessDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -323,7 +352,114 @@ fun BrightnessCard(
                 manualBrightness,
                 onSliderBrightnessValueChanged,
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            CardTitle(
+                Icons.Default.BrightnessAuto,
+                stringResource(R.string.mc_auto_brightness),
+                true,
+                isAutoBrightness,
+                onAutoBrightnessCheckedChangeAction
+            )
+
+            CardButtonWide(
+                Icons.Default.BarChart,
+                stringResource(R.string.mc_hourly_brightness),
+                { showHourlyBrightnessDialog = true },
+                false
+            )
+
+            HourlyBrightnessDialog(
+                currentValue = hourlyBrightness,
+                showDialog = showHourlyBrightnessDialog,
+                autoBrightnessEnabled = isAutoBrightness,
+                onDismiss = { showHourlyBrightnessDialog = false },
+                onValueConfirmed = { newValue ->
+                    showHourlyBrightnessDialog = false
+                    onHourlyBrightnessConfirmed(newValue)
+                }
+            )
         }
+    }
+}
+
+@Composable
+fun HourlyBrightnessDialog(
+    currentValue: TetrisClockHourlyBrightness,
+    showDialog: Boolean,
+    autoBrightnessEnabled: Boolean,
+    onDismiss: () -> Unit,
+    onValueConfirmed: (TetrisClockHourlyBrightness) -> Unit
+) {
+    if (showDialog) {
+        var localValues by remember(currentValue) { mutableStateOf(currentValue.values) }
+
+        AlertDialog(
+            title = { Text(stringResource(R.string.mc_hourly_brightness_dialog_title)) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    if (!autoBrightnessEnabled) {
+                        Text(
+                            text = stringResource(R.string.mc_hourly_brightness_disabled_tip),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    localValues.forEachIndexed { hour, value ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "%02d:00".format(hour),
+                                modifier = Modifier.width(52.dp),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
+                            Slider(
+                                value = value.toFloat(),
+                                onValueChange = { newValue ->
+                                    localValues = localValues.toMutableList().also {
+                                        it[hour] = newValue.toInt()
+                                    }
+                                },
+                                valueRange = 0f..15f,
+                                steps = 14,
+                                enabled = autoBrightnessEnabled,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Text(
+                                text = "${value + 1}",
+                                modifier = Modifier.width(24.dp),
+                                textAlign = TextAlign.End,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            },
+            onDismissRequest = onDismiss,
+            confirmButton = {
+                Button(
+                    onClick = { onValueConfirmed(TetrisClockHourlyBrightness(localValues)) }
+                ) {
+                    Text(stringResource(R.string.mc_dialog_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.mc_dialog_cancel))
+                }
+            }
+        )
     }
 }
 
@@ -928,6 +1064,10 @@ fun DeviceSettings_State1_Preview(){
             onButtonSyncClickAction = {},
             manualBrightness = 8,
             onSliderBrightnessValueChanged = {},
+            isAutoBrightness = true,
+            onAutoBrightnessCheckedChangeAction = {},
+            hourlyBrightness = TetrisClockHourlyBrightness(),
+            onHourlyBrightnessConfirmed = {},
             bleTime = TetrisClockTime(
                 LocalDateTime.now()
                     .minusHours(1)
@@ -973,6 +1113,10 @@ fun DeviceSettings_State2_Preview(){
             onButtonSyncClickAction = {},
             manualBrightness = 3,
             onSliderBrightnessValueChanged = {},
+            isAutoBrightness = false,
+            onAutoBrightnessCheckedChangeAction = {},
+            hourlyBrightness = TetrisClockHourlyBrightness(),
+            onHourlyBrightnessConfirmed = {},
             bleTime = TetrisClockTime(
                 LocalDateTime.now()
                     .minusHours(1)

@@ -9,8 +9,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
+import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.HourlyBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.RtcTemperatureReadCharacteristicHandler
@@ -28,6 +30,7 @@ class TetrisClockBleManager(
     val onOffReadCharacteristicHandler: OnOffReadCharacteristicHandler,
     val manualBrightnessReadCharacteristicHandler: ManualBrightnessReadCharacteristicHandler,
     val autoBrightnessReadCharacteristicHandler: AutoBrightnessReadCharacteristicHandler,
+    val hourlyBrightnessReadCharacteristicHandler: HourlyBrightnessReadCharacteristicHandler,
     var turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler,
     val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
     val agingOffsetReadCharacteristicHandler: AgingOffsetReadCharacteristicHandler,
@@ -40,6 +43,7 @@ class TetrisClockBleManager(
     private var mcOnOffCharacteristic: BluetoothGattCharacteristic? = null
     private var mcManualBrightValueCharacteristic: BluetoothGattCharacteristic? = null
     private var mcAutoBrightnessCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcHourlyBrightnessCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOnAlarmCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOffAlarmCharacteristic: BluetoothGattCharacteristic? = null
     private var mcAgingOffsetCharacteristic: BluetoothGattCharacteristic? = null
@@ -54,6 +58,7 @@ class TetrisClockBleManager(
             mcOnOffCharacteristic = service.getCharacteristic(MC_TURN_ON_CONTROL_CHAR_UUID)
             mcManualBrightValueCharacteristic = service.getCharacteristic(MC_MANUAL_BRIGHT_VAL_CHAR_UUID)
             mcAutoBrightnessCharacteristic = service.getCharacteristic(MC_AUTO_BRIGHT_ENABLE_CHAR_UUID)
+            mcHourlyBrightnessCharacteristic = service.getCharacteristic(MC_HOURLY_BRIGHTNESS_CHAR_UUID)
             mcTurnOnAlarmCharacteristic = service.getCharacteristic(MC_TURN_ON_ALARM_CHAR_UUID)
             mcTurnOffAlarmCharacteristic = service.getCharacteristic(MC_TURN_OFF_ALARM_CHAR_UUID)
             mcAgingOffsetCharacteristic = service.getCharacteristic(MC_AGING_OFFSET_CHAR_UUID)
@@ -76,6 +81,7 @@ class TetrisClockBleManager(
                 //&& mcVersionCharacteristic != null
                 //&& mcOtaControlCharacteristic != null
                 //&& mcOtaDataCharacteristic != null
+                //&& mcHourlyBrightnessCharacteristic != null
     }
 
     override fun onServicesInvalidated() {
@@ -83,6 +89,7 @@ class TetrisClockBleManager(
         mcOnOffCharacteristic = null
         mcManualBrightValueCharacteristic = null
         mcAutoBrightnessCharacteristic = null
+        mcHourlyBrightnessCharacteristic = null
         mcTurnOnAlarmCharacteristic = null
         mcTurnOffAlarmCharacteristic = null
         mcAgingOffsetCharacteristic = null
@@ -199,6 +206,19 @@ class TetrisClockBleManager(
         }
     }
 
+    fun getHourlyBrightnessCharacteristic() {
+        hourlyBrightnessReadCharacteristicHandler.let {
+            readCharacteristic(mcHourlyBrightnessCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
+    }
+
     fun getTurnOnAlarmCharacteristic() {
         turnOnAlarmReadCharacteristicHandler.let {
             readCharacteristic(mcTurnOnAlarmCharacteristic)
@@ -296,6 +316,14 @@ class TetrisClockBleManager(
         ).enqueue()
     }
 
+    fun setHourlyBrightnessCharacteristic(hourlyBrightness: TetrisClockHourlyBrightness) {
+        writeCharacteristic(
+            mcHourlyBrightnessCharacteristic,
+            hourlyBrightness.toByteArray(),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
+    }
+
     fun setTurnOnAlarmCharacteristic(alarm: TetrisClockAlarm) {
         writeCharacteristic(
             mcTurnOnAlarmCharacteristic,
@@ -370,6 +398,12 @@ class TetrisClockBleManager(
         // Possible values are 0..15 (0 is not fully Off, just minimum value)
         // Mode: Read, Write
         val MC_MANUAL_BRIGHT_VAL_CHAR_UUID: UUID = UUID.fromString("117ED80D-AF6E-4E4D-B900-48F68725A7D3")
+
+        // Hourly brightness schedule: 24 brightness nibbles (0..15), one per hour of day
+        // (index 0 = 00h..00:59, ... index 23 = 23h..23:59).
+        // Used as the brightness source when auto brightness is enabled (MC_AUTO_BRIGHT_ENABLE_CHAR_UUID).
+        // Mode: Read, Write
+        val MC_HOURLY_BRIGHTNESS_CHAR_UUID: UUID = UUID.fromString("C2C5D9AA-4C0B-4A69-9E9B-9E1D8B7A2F31")
 
         // Alarm timer to turn ON the clock at a specific time (for example, in the morning).
         // This alarm event takes precedence over manual control.

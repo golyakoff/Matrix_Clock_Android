@@ -19,9 +19,11 @@ import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
+import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.HourlyBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.RtcTemperatureReadCharacteristicHandler
@@ -100,6 +102,14 @@ class BluetoothService @Inject constructor(
         _tetrisClockIsAutoBrightness
     )
 
+    // Hourly Brightness Schedule (used as the auto brightness source)
+    private var _hourlyBrightnessState: TetrisClockHourlyBrightness = TetrisClockHourlyBrightness()
+    private val _tetrisClockHourlyBrightness = MutableStateFlow(_hourlyBrightnessState)
+    val tetrisClockHourlyBrightness: StateFlow<TetrisClockHourlyBrightness> = _tetrisClockHourlyBrightness
+    private val hourlyBrightnessReadCharacteristicHandler = HourlyBrightnessReadCharacteristicHandler(
+        _tetrisClockHourlyBrightness
+    )
+
     // Turn ON Alarm
     private var _turnOnAlarm: TetrisClockAlarm = TetrisClockAlarm()
     private val _tetrisClockTurnOnAlarm = MutableStateFlow(_turnOnAlarm)
@@ -147,6 +157,7 @@ class BluetoothService @Inject constructor(
         onOffReadCharacteristicHandler,
         manualBrightnessReadCharacteristicHandler,
         autoBrightnessReadCharacteristicHandler,
+        hourlyBrightnessReadCharacteristicHandler,
         turnOnAlarmReadCharacteristicHandler,
         turnOffAlarmReadCharacteristicHandler,
         agingOffsetReadCharacteristicHandler,
@@ -290,6 +301,7 @@ class BluetoothService @Inject constructor(
         bleManager.getOnOffCharacteristic()
         bleManager.getManualBrightnessCharacteristic()
         bleManager.getAutoBrightnessCharacteristic()
+        bleManager.getHourlyBrightnessCharacteristic()
         bleManager.getTurnOnAlarmCharacteristic()
         bleManager.getTurnOffAlarmCharacteristic()
         bleManager.getAgingOffsetCharacteristic()
@@ -347,6 +359,15 @@ class BluetoothService @Inject constructor(
 
         if (bleManager.isReady) {
             bleManager.setAutoBrightnessCharacteristic(isAuto)
+        }
+    }
+
+    fun setHourlyBrightnessCharacteristic(hourlyBrightness: TetrisClockHourlyBrightness) {
+        _hourlyBrightnessState = hourlyBrightness
+        _tetrisClockHourlyBrightness.value = hourlyBrightness
+
+        if (bleManager.isReady) {
+            bleManager.setHourlyBrightnessCharacteristic(hourlyBrightness)
         }
     }
 

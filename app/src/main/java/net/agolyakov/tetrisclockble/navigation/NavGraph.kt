@@ -41,7 +41,7 @@ fun SetupNavGraph(
             DeviceScreen(navController, device)
         }
 
-        composable(route = Screen.FirmwareUpdate.route) {
+        composable(route = Screen.Firmware.route) {
             FirmwareScreen(
                 onBack = { navController.popBackStack() }
             )

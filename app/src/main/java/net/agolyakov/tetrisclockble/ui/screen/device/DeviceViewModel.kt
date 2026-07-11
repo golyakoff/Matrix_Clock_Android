@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
+import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.ui.component.TimePickerDialogState
 import net.agolyakov.tetrisclockble.data.local.TetrisClockPreferences
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
@@ -67,6 +68,7 @@ class DeviceViewModel @Inject constructor(
     val tetrisClockTetrisOn = bluetoothService.tetrisClockIsOn
     val tetrisClockManualBrightness = bluetoothService.tetrisClockManualBrightness
     val tetrisClockIsAutoBrightness = bluetoothService.tetrisClockIsAutoBrightness
+    val tetrisClockHourlyBrightness = bluetoothService.tetrisClockHourlyBrightness
     val tetrisClockTurnOnAlarm = bluetoothService.tetrisClockTurnOnAlarm
     var tetrisClockTurnOffAlarm = bluetoothService.tetrisClockTurnOffAlarm
     val tetrisClockAgingOffset = bluetoothService.tetrisClockAgingOffset
@@ -152,6 +154,14 @@ class DeviceViewModel @Inject constructor(
 
     fun setAgingOffsetCharacteristic(agingOffset: Int) {
         bluetoothService.setAgingOffsetCharacteristic(agingOffset)
+    }
+
+    fun toggleAutoBrightnessCharacteristic() {
+        bluetoothService.toggleAutoBrightnessCharacteristic()
+    }
+
+    fun setHourlyBrightnessCharacteristic(hourlyBrightness: TetrisClockHourlyBrightness) {
+        bluetoothService.setHourlyBrightnessCharacteristic(hourlyBrightness)
     }
 
     fun toggleAlarmActive(alarmType: TetrisClockAlarmType) {
