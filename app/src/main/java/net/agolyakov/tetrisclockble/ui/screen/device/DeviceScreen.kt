@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -194,8 +193,7 @@ fun DeviceSettings(
     ) {
         HeaderCard(
             deviceFriendlyName,
-            deviceMacAddress,
-            firmwareVersion
+            deviceMacAddress
         )
 
         BrightnessCard(
@@ -238,7 +236,6 @@ fun DeviceSettings(
 fun HeaderCard(
     friendlyName: String,
     macAddress: String,
-    firmwareVersion: String,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -282,27 +279,6 @@ fun HeaderCard(
                     text = macAddress,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-
-                Spacer(Modifier.width(8.dp))
-
-                Text(
-                    text = firmwareVersion,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }

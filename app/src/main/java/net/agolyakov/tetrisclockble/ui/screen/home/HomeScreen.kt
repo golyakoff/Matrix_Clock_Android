@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import net.agolyakov.tetrisclockble.BuildConfig
 import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
@@ -36,17 +38,23 @@ fun HomeScreen(
     var showRenameDialog by remember { mutableStateOf(false) }
     var deviceToRename by remember { mutableStateOf<TetrisClockDevice?>(null) }
 
-    Box(
+    Column(
         modifier = Modifier
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .fillMaxSize()
-            .systemBarsPadding(),
-        contentAlignment = Alignment.TopCenter
+            .systemBarsPadding()
     ) {
-        DeviceList(devices, navController, onRenameClick = { device ->
-            deviceToRename = device
-            showRenameDialog = true
-        })
+        DeviceList(
+            devices,
+            navController,
+            modifier = Modifier.weight(1f),
+            onRenameClick = { device ->
+                deviceToRename = device
+                showRenameDialog = true
+            }
+        )
+
+        AppVersionPlaque(appVersion = BuildConfig.VERSION_NAME)
     }
 
     if (showRenameDialog && deviceToRename != null) {
@@ -67,15 +75,53 @@ fun HomeScreen(
 fun DeviceList(
     deviceList: List<TetrisClockDevice>,
     navController: NavHostController,
+    modifier: Modifier = Modifier,
     onRenameClick: (TetrisClockDevice) -> Unit
 ) {
     LazyColumn(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceContainer)
     ) {
         itemsIndexed(deviceList) { _, item ->
             Device(item, navController, onRenameClick)
+        }
+    }
+}
+
+@Composable
+fun AppVersionPlaque(
+    appVersion: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp, 8.dp, 16.dp, 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = stringResource(R.string.mc_app_version, appVersion),
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }

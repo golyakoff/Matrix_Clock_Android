@@ -24,4 +24,5 @@
     <string name="mc_rename_device">Переименовать устройство</string>
     <string name="mc_dialog_save">Сохранить</string>
     <string name="mc_dialog_device_name">Наименование устройства</string>
+    <string name="mc_app_version">Версия приложения: %1$s</string>
 </resources>
