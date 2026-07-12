@@ -1,18 +1,25 @@
+# Release 1.3.0
+
+- [x] Added a link on the Home screen to check for and open the latest app release on GitHub
+- [x] Split the matrix on/off toggle into its own card above the brightness card
+- [x] Reordered the brightness card layout and renamed the hourly schedule button
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.2.0...v1.3.0
+
 # Release 1.2.0
 
-- [x] Added the hourly brightness schedule: 24 per-hour brightness levels, edited in a dialog on the Device screen and stored on the clock (requires firmware v1.1.2 or newer)
-- [x] Reworked the brightness card: the matrix on/off switch is no longer attached to the "Яркость" title but has its own "Табло Вкл/Выкл" row, and "Автояркость" now shows the level the schedule holds for the current hour
-- [x] The manual brightness slider is disabled while auto brightness is on, since the clock follows the schedule then
+- [x] Added hourly brightness schedule (24 per-hour levels, requires firmware v1.1.2+)
+- [x] Reworked the brightness card layout
+- [x] Manual brightness slider is disabled while auto brightness is on
 
 **Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.1.0...v1.2.0
 
 # Release 1.1.0
 
-- [x] Fixed a hardcoded, now GitHub-revoked personal access token that broke firmware update checks (401 errors, apparent hang) after the ESP32 firmware repo went public - GitHub API calls no longer send any auth token
-- [x] Fixed the device firmware version shown on the Device screen (was hardcoded, now read from the device)
-- [x] Fixed stale device data (e.g. firmware version) persisting on screen after switching to a different paired device in the same app session
-- [x] Removed the duplicate firmware version label on the Device screen
-- [x] Added the app's own version number, shown at the bottom of the device list screen
+- [x] Fixed firmware update checks failing with 401 errors
+- [x] Fixed device firmware version display and removed the duplicate label
+- [x] Fixed stale device data showing after switching devices
+- [x] Added app version number on the device list screen
 
 **Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.0.0...v1.1.0
 
