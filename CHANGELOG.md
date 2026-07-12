@@ -1,9 +1,11 @@
-# Release 1.3.2
+# Release 1.3.3
 
-- [x] Updated Android Gradle Plugin to 8.13.2
+- [x] Updated Android Gradle Plugin to 9.2.1 and Gradle to 9.6.1
 - [x] Migrated to Gradle Daemon toolchain (auto-detected/provisioned JDK for the build daemon)
+- [x] Moved `hiltViewModel()` usages to the new `androidx.hilt:hilt-lifecycle-viewmodel-compose` artifact
+- [x] Minor Kotlin compiler warning cleanup (annotation targeting, `@OptIn(FlowPreview::class)`)
 
-**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.3.1...v1.3.2
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.3.1...v1.3.3
 
 # Release 1.3.1
 

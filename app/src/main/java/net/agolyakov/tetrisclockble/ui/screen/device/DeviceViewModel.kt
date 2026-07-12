@@ -5,6 +5,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,7 @@ import net.agolyakov.tetrisclockble.data.local.TetrisClockPreferences
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
 import javax.inject.Inject
 
+@OptIn(FlowPreview::class)
 @HiltViewModel
 class DeviceViewModel @Inject constructor(
     private val preferences: TetrisClockPreferences,

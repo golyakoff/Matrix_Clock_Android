@@ -18,8 +18,8 @@ android {
         applicationId = "net.agolyakov.tetrisclockble"
         minSdk = 28     // Android 9
         targetSdk = 36  // Android 16
-        versionCode = 15
-        versionName = "1.3.2"
+        versionCode = 16
+        versionName = "1.3.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -50,6 +50,7 @@ android {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
             freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
+            freeCompilerArgs.add("-Xannotation-default-target=param-property")
         }
     }
     buildFeatures {
@@ -71,6 +72,7 @@ dependencies {
     implementation(libs.lifecycle.compose)
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.lifecycle.viewmodel.compose)
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.material3)
     implementation(libs.material3.window)
