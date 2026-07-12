@@ -6,15 +6,11 @@ import android.bluetooth.BluetoothAdapter
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.view.ScrollCaptureCallback
-import android.view.ScrollCaptureSession
-import android.view.View
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.rememberNavController
@@ -30,24 +26,11 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var bluetoothService: BluetoothService
 
-    @RequiresApi(Build.VERSION_CODES.S)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Включение ScrollCapture для скриншотов с прокруткой (Android 12+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            enableScrollCapture()
-        }
-
         setContent {
             MainContent()
-        }
-    }
-
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun enableScrollCapture() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.decorView.setScrollCaptureHint(View.SCROLL_CAPTURE_HINT_INCLUDE)
         }
     }
 
@@ -69,14 +52,12 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.S)
 @Composable
 fun MainContent() {
     TetrisClockBLETheme {
         val navController = rememberNavController()
         val context = LocalContext.current
 
-        // Launcher для включения Bluetooth
         val enableBluetoothLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.StartActivityForResult()
         ) { result ->
@@ -94,7 +75,6 @@ fun MainContent() {
                 listOf(
                     Manifest.permission.ACCESS_FINE_LOCATION)
 
-        // Запрос разрешений
         MyRequestPermission(permissions) { granted ->
             if (granted) {
                 enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
@@ -103,7 +83,6 @@ fun MainContent() {
             }
         }
 
-        // Навигация
         SetupNavGraph(navController = navController)
     }
 }

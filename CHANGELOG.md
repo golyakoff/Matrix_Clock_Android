@@ -1,3 +1,10 @@
+# Release 1.3.1
+
+- [x] Removed a dead/ineffective manual scroll-capture hint call; Compose already registers scroll capture for scrollable screens on its own
+- [x] Note: Android's scrolling screenshot ("Capture more") may still be unavailable on some OEM builds (confirmed on Xiaomi HyperOS) due to a limitation in their long-screenshot detection, unrelated to this app
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.3.0...v1.3.1
+
 # Release 1.3.0
 
 - [x] Added a link on the Home screen to check for and open the latest app release on GitHub
