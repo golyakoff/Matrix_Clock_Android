@@ -78,6 +78,7 @@ import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.ui.component.TimePickerDialogState
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
+import net.agolyakov.tetrisclockble.ui.theme.displayFontFamily
 import net.agolyakov.tetrisclockble.ui.theme.timeHeadlineMedium
 import java.time.LocalDateTime
 
@@ -127,8 +128,8 @@ fun DeviceScreen(
     }
 
     DeviceSettings(
-        deviceFriendlyName = device?.friendlyName ?: device?.deviceName ?: "<без имени>",
-        deviceMacAddress = device?.macAddress ?: "<без адреса?",
+        deviceFriendlyName = device?.friendlyName ?: device?.deviceName ?: stringResource(R.string.mc_unnamed_device),
+        deviceMacAddress = device?.macAddress ?: stringResource(R.string.mc_unknown_address),
         firmwareVersion = firmwareVersion,
         isOn = isOn,
         onSwitchOnOffCheckedChangeAction = { isChecked ->
@@ -549,7 +550,7 @@ fun TimeSyncCard(
         ) {
             CardTitle(
                 Icons.Default.Adjust,
-                "Точность хода")
+                stringResource(R.string.mc_accuracy))
 
             // Карточки времени в строку
             Row(
@@ -639,7 +640,7 @@ fun TimeCard(
                 )
                 Text(
                     text = ":",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.timeHeadlineMedium.copy(fontFamily = displayFontFamily),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -651,7 +652,7 @@ fun TimeCard(
                 )
                 Text(
                     text = ":",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.timeHeadlineMedium.copy(fontFamily = displayFontFamily),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -706,7 +707,7 @@ fun AgingOffsetDialog(
                         onValueChange = {
                             inputValue = it.filter { char -> char.isDigit() || char == '-' }
                         },
-                        label = { Text("Значение от -128 до 127") },
+                        label = { Text(stringResource(R.string.mc_aging_offset_range_hint)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
                 }
@@ -760,7 +761,7 @@ fun OnOffScenariosCard(
         {
             CardTitle(
                 Icons.Default.Timelapse,
-                "Сценарии")
+                stringResource(R.string.mc_scenarios))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -768,16 +769,16 @@ fun OnOffScenariosCard(
             ) {
                 AlarmItem(
                     modifier = Modifier.weight(1f),
-                    labelTop = "Авто", // = stringResource(R.string.mc_check_auto_on),
-                    labelBottom = "ВКЛ",
+                    labelTop = stringResource(R.string.mc_auto),
+                    labelBottom = stringResource(R.string.mc_on),
                     alarm = turnOnAlarm,
                     onTimeClick = turnOnAlarmOnTimeClick,
                     onActiveToggle = turnOnAlarmOnActiveToggle
                 )
                 AlarmItem(
                     modifier = Modifier.weight(1f),
-                    labelTop = "Авто", // stringResource(R.string.mc_check_auto_off),
-                    labelBottom = "ВЫКЛ",
+                    labelTop = stringResource(R.string.mc_auto),
+                    labelBottom = stringResource(R.string.mc_off),
                     alarm = turnOffAlarm,
                     onTimeClick = turnOffAlarmOnTimeClick,
                     onActiveToggle = turnOffAlarmOnActiveToggle
@@ -890,7 +891,7 @@ fun AlarmTimeField(
             )
             Text(
                 text = ":",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.timeHeadlineMedium.copy(fontFamily = displayFontFamily),
                 fontWeight = FontWeight.Bold,
                 color = color
             )
@@ -966,7 +967,7 @@ fun SystemInfoCard(
         {
             CardTitle(
                 Icons.Default.PermDeviceInformation,
-                "Система"
+                stringResource(R.string.mc_system)
             )
 
             Text(
@@ -982,7 +983,7 @@ fun SystemInfoCard(
 
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = "Версия прошивки часов: " + firmwareVersion,
+                text = stringResource(R.string.mc_clock_firmware_version, firmwareVersion),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -991,7 +992,7 @@ fun SystemInfoCard(
 
             CardButtonWide(
                 Icons.Default.SystemUpdateAlt,
-                "Обновление прошивки",
+                stringResource(R.string.mc_firmware_update_title),
                 onFirmwareUpdateButtonClickAction,
                 false
             )

@@ -1,5 +1,10 @@
 package net.agolyakov.tetrisclockble.ui.screen.home
 
+import android.app.Activity
+import android.app.LocaleManager
+import android.os.Build
+import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,12 +20,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
+import androidx.core.os.LocaleListCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import net.agolyakov.tetrisclockble.BuildConfig
@@ -79,6 +86,55 @@ fun HomeScreen(
 }
 
 @Composable
+fun LanguageToggle() {
+    val context = LocalContext.current
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = stringResource(R.string.mc_language_label),
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(Modifier.width(4.dp))
+
+        // Language names are endonyms and stay untranslated regardless of the active locale.
+        Text(
+            text = "English",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable { setAppLocale(context, "en") }
+        )
+
+        Text(
+            text = " | ",
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Text(
+            text = "Русский",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable { setAppLocale(context, "ru") }
+        )
+    }
+}
+
+private fun setAppLocale(context: android.content.Context, languageTag: String) {
+    // AppCompatDelegate.setApplicationLocales() relies on an active AppCompatDelegate
+    // instance to resolve the app context, which this app never creates since
+    // MainActivity is a plain ComponentActivity. Call the framework LocaleManager
+    // directly on API 33+ (where it's guaranteed to exist) and fall back to the
+    // AppCompat shim + manual recreate() below that.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        context.getSystemService(LocaleManager::class.java).applicationLocales =
+            LocaleList.forLanguageTags(languageTag)
+    } else {
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(languageTag))
+        (context as? Activity)?.recreate()
+    }
+}
+
+@Composable
 fun DeviceList(
     deviceList: List<TetrisClockDevice>,
     navController: NavHostController,
@@ -133,6 +189,14 @@ fun AppVersionPlaque(
                     text = stringResource(R.string.mc_app_version, appVersion),
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 52.dp, end = 16.dp, bottom = 12.dp)
+            ) {
+                LanguageToggle()
             }
 
             if (updateState is AppUpdateRepository.UpdateCheckState.UpdateAvailable) {
@@ -201,7 +265,7 @@ fun Device(
             Icon(
                 Icons.Outlined.AccessTime,
                 tint = MaterialTheme.colorScheme.primary,
-                contentDescription = "Настроить",
+                contentDescription = stringResource(R.string.mc_configure),
                 modifier = Modifier.size(48.dp)
             )
 

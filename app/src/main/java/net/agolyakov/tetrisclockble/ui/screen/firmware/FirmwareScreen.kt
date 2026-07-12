@@ -26,10 +26,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
 import net.agolyakov.tetrisclockble.ui.screen.firmware.NoUpdateScreenInternal
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
@@ -117,7 +119,7 @@ private fun IdleScreenInternal(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Обновление прошивки",
+            text = stringResource(R.string.mc_firmware_update_title),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurface
@@ -130,7 +132,7 @@ private fun IdleScreenInternal(
             modifier = Modifier.fillMaxWidth(0.85f)
         ) {
             Text(
-                text = "Искать обновления",
+                text = stringResource(R.string.mc_firmware_check_for_updates),
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -150,7 +152,7 @@ private fun CheckingScreen() {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Проверяем доступность обновлений...",
+            text = stringResource(R.string.mc_firmware_checking),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface
@@ -183,7 +185,7 @@ private fun UpdateAvailableScreenInternal(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Доступно обновление!",
+            text = stringResource(R.string.mc_firmware_update_available),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -191,14 +193,14 @@ private fun UpdateAvailableScreenInternal(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Текущая версия: ${currentFirmwareVersion}",
+            text = stringResource(R.string.mc_firmware_current_version, currentFirmwareVersion),
             color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Новая версия: ${newFirmwareVersion}",
+            text = stringResource(R.string.mc_firmware_new_version, newFirmwareVersion),
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -209,7 +211,7 @@ private fun UpdateAvailableScreenInternal(
             modifier = Modifier.fillMaxWidth(0.85f)
         ) {
             Text(
-                text = "Обновить",
+                text = stringResource(R.string.mc_firmware_update_action),
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -221,7 +223,7 @@ private fun UpdateAvailableScreenInternal(
             modifier = Modifier.fillMaxWidth(0.85f)
         ) {
                Text(
-                   text = "Назад",
+                   text = stringResource(R.string.mc_back),
                    style = MaterialTheme.typography.titleMedium
                )
         }
@@ -249,7 +251,7 @@ private fun NoUpdateScreenInternal(
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
-            contentDescription = "Success",
+            contentDescription = stringResource(R.string.mc_content_description_success),
             tint = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.size(72.dp)
         )
@@ -257,7 +259,7 @@ private fun NoUpdateScreenInternal(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "У вас самая актуальная прошивка",
+            text = stringResource(R.string.mc_firmware_up_to_date),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface
@@ -266,7 +268,7 @@ private fun NoUpdateScreenInternal(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Версия: ${currentFirmwareVersion}",
+            text = stringResource(R.string.mc_firmware_version, currentFirmwareVersion),
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -279,7 +281,7 @@ private fun NoUpdateScreenInternal(
             onClick = onBack
         ) {
             Text(
-                text = "Назад",
+                text = stringResource(R.string.mc_back),
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -302,7 +304,7 @@ private fun DownloadingScreen(
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            text = "Скачивание: ${"%.1f".format(progress)}%",
+            text = stringResource(R.string.mc_firmware_download_progress, progress),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -339,7 +341,7 @@ private fun ReadyToInstallScreenInternal(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Прошивка готова",
+            text = stringResource(R.string.mc_firmware_ready),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -347,14 +349,14 @@ private fun ReadyToInstallScreenInternal(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Версия: ${firmwareVersion}",
+            text = stringResource(R.string.mc_firmware_version, firmwareVersion),
             color = MaterialTheme.colorScheme.onSurface
         )
 
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Размер: ${firmwareSize / 1024} KB",
+            text = stringResource(R.string.mc_firmware_size, firmwareSize / 1024),
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -364,7 +366,7 @@ private fun ReadyToInstallScreenInternal(
             onClick = onInstall
         ) {
             Text(
-                text = "Установить прошивку",
+                text = stringResource(R.string.mc_firmware_install_action),
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -388,7 +390,7 @@ private fun InstallingScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Установка: ${"%.1f".format(progress)}%",
+            text = stringResource(R.string.mc_firmware_install_progress, progress),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
@@ -420,7 +422,7 @@ private fun ProcessingScreen(
 
         Text(
             style = MaterialTheme.typography.titleMedium,
-            text = "Выполняется обновление...",
+            text = stringResource(R.string.mc_firmware_processing),
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -446,7 +448,7 @@ private fun ProcessingScreen(
 @Composable
 private fun SuccessScreen(onBack: () -> Unit) {
     SuccessScreenInternal(
-        "Обновление завершено!",
+        stringResource(R.string.mc_ota_complete),
         onBack
     )
 }
@@ -462,7 +464,7 @@ private fun SuccessScreenInternal(
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
-            contentDescription = "Success",
+            contentDescription = stringResource(R.string.mc_content_description_success),
             tint = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.size(72.dp)
         )
@@ -484,7 +486,7 @@ private fun SuccessScreenInternal(
             onClick = onBack
         ) {
             Text(
-                text = "Готово",
+                text = stringResource(R.string.mc_firmware_done_action),
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -516,7 +518,7 @@ private fun ErrorScreenInternal(
     ) {
         Icon(
             imageVector = Icons.Default.Error,
-            contentDescription = "Error",
+            contentDescription = stringResource(R.string.mc_error),
             tint = MaterialTheme.colorScheme.error,
             modifier = Modifier.size(72.dp)
         )
@@ -524,7 +526,7 @@ private fun ErrorScreenInternal(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Ошибка",
+            text = stringResource(R.string.mc_error),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.error
         )
@@ -542,7 +544,7 @@ private fun ErrorScreenInternal(
             modifier = Modifier.fillMaxWidth(0.85f)
         ) {
             Text(
-                text = "Попробовать снова",
+                text = stringResource(R.string.mc_firmware_retry_action),
                 style = MaterialTheme.typography.titleMedium
             )
         }
@@ -554,7 +556,7 @@ private fun ErrorScreenInternal(
             modifier = Modifier.fillMaxWidth(0.85f),
         ) {
             Text(
-                text = "Назад",
+                text = stringResource(R.string.mc_back),
                 style = MaterialTheme.typography.titleMedium)
         }
     }

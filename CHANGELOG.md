@@ -1,3 +1,10 @@
+# Release 1.4.0
+
+- [x] Added English as a second app language, switchable in-app via "Язык: English | Русский" on the Home screen (works alongside Android's own per-app language setting on Android 13+)
+- [x] Slightly reduced card title and clock digit font sizes so longer English strings fit without wrapping
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.3.3...v1.4.0
+
 # Release 1.3.3
 
 - [x] Updated Android Gradle Plugin to 9.2.1 and Gradle to 9.6.1

@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
 import net.agolyakov.tetrisclockble.data.model.github.GithubAsset
 import net.agolyakov.tetrisclockble.data.model.github.GithubRelease
@@ -76,7 +77,7 @@ class FirmwareRepository @Inject constructor(
                 validateFirmware(firmwareFile, asset)
                 UpdateState.ReadyToInstall(firmwareFile, release)
             } catch (e: Exception) {
-                UpdateState.Error(e.message ?: "Download failed")
+                UpdateState.Error(e.message ?: context.getString(R.string.mc_ota_download_failed))
             }
         }
     }
@@ -90,7 +91,7 @@ class FirmwareRepository @Inject constructor(
                 installFirmwareInternal(firmwareFile, onProgress)
                 UpdateState.Success
             } catch (e: Exception) {
-                UpdateState.Error(e.message ?: "Installation failed")
+                UpdateState.Error(e.message ?: context.getString(R.string.mc_ota_install_failed))
             }
         }
     }
@@ -101,11 +102,11 @@ class FirmwareRepository @Inject constructor(
     ): UpdateResult = withContext(Dispatchers.IO) {
         try {
             // 1. Проверяем текущую версию
-            onProgress(0f, "Получение текущей версии...")
+            onProgress(0f, context.getString(R.string.mc_ota_getting_current_version))
             val currentVersion = getCurrentVersion()
 
             // 2. Проверяем обновления
-            onProgress(1f, "Проверка наличия обновлений...")
+            onProgress(1f, context.getString(R.string.mc_ota_checking_updates))
             val updateState = checkForUpdates(includePreReleases)
             if (updateState is UpdateState.NoUpdate) {
                 return@withContext UpdateResult.NoUpdateAvailable(currentVersion)
@@ -114,10 +115,10 @@ class FirmwareRepository @Inject constructor(
             val release = (updateState as UpdateState.UpdateAvailable).release
 
             // 3. Скачиваем прошивку
-            onProgress(2f, "Скачивание прошивки...")
+            onProgress(2f, context.getString(R.string.mc_ota_downloading))
             val downloadResult = downloadFirmware(release) { downloadProgress ->
                 val overallProgress = 2f + downloadProgress * 0.03f
-                onProgress(overallProgress, "Скачивание прошивки...")
+                onProgress(overallProgress, context.getString(R.string.mc_ota_downloading))
             }
 
             if (downloadResult is UpdateState.Error) {
@@ -127,10 +128,10 @@ class FirmwareRepository @Inject constructor(
             val firmwareFile = (downloadResult as UpdateState.ReadyToInstall).file
 
             // 4. Устанавливаем прошивку
-            onProgress(5f, "Установка обновления...")
+            onProgress(5f, context.getString(R.string.mc_ota_installing))
             val installResult = installFirmware(firmwareFile) { installProgress ->
                 val overallProgress = 5f + installProgress * 0.94f
-                onProgress(overallProgress, "Установка обновления...")
+                onProgress(overallProgress, context.getString(R.string.mc_ota_installing))
             }
 
             if (installResult is UpdateState.Error) {
@@ -138,7 +139,7 @@ class FirmwareRepository @Inject constructor(
             }
 
             // 5. Проверяем обновление
-            onProgress(99f, "Перезагрузка устройства...")
+            onProgress(99f, context.getString(R.string.mc_ota_rebooting_device))
             bluetoothService.disconnect()
 
             delay(5000)
@@ -154,7 +155,7 @@ class FirmwareRepository @Inject constructor(
                     val uploadedFirmwareVersion = updateState.release.tagName
                     val realDeviceFirmwareVersion = getCurrentVersion()
                     if (realDeviceFirmwareVersion == uploadedFirmwareVersion) {
-                        onProgress(100f, "Обновление завершено!")
+                        onProgress(100f, context.getString(R.string.mc_ota_complete))
                         return@withContext UpdateResult.Success(currentVersion, realDeviceFirmwareVersion)
                     }
                     delay(1000)
@@ -165,14 +166,14 @@ class FirmwareRepository @Inject constructor(
                 }
             }
 
-            UpdateResult.Error("Не могу проверить корректность установки!")
+            UpdateResult.Error(context.getString(R.string.mc_ota_verify_failed))
 
         } catch (e: CancellationException) {
             abortOta()
             UpdateResult.Cancelled
         } catch (e: Exception) {
             abortOta()
-            UpdateResult.Error("Обновление завершилось ошибкой: ${e.message}", e)
+            UpdateResult.Error(context.getString(R.string.mc_ota_error, e.message), e)
         }
     }
 

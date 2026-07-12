@@ -2,6 +2,7 @@ package net.agolyakov.tetrisclockble.ui.screen.home
 
 import android.Manifest
 import android.bluetooth.le.*
+import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.annotation.RequiresPermission
@@ -10,10 +11,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.extensions.toBleDevice
 import net.agolyakov.tetrisclockble.data.repository.AppUpdateRepository
@@ -29,7 +32,8 @@ class HomeViewModel @Inject constructor(
     bluetoothAdapterProvider: BluetoothAdapterProvider,
     private val preferencesRepository: PreferencesRepository,
     private val loadDeviceWithNameUseCase: LoadDeviceWithNameUseCase,
-    private val appUpdateRepository: AppUpdateRepository
+    private val appUpdateRepository: AppUpdateRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _appUpdateState =
         MutableStateFlow<AppUpdateRepository.UpdateCheckState>(AppUpdateRepository.UpdateCheckState.UpToDate)
@@ -87,7 +91,7 @@ class HomeViewModel @Inject constructor(
     inner class BleScanCallback : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             if (!foundDevices.containsKey(result.device.address)) {
-                val device = result.toBleDevice()
+                val device = result.toBleDevice(context.getString(R.string.mc_unnamed_device))
                 val enriched = loadDeviceWithNameUseCase(device)
                 foundDevices[result.device.address] = enriched
             }
@@ -97,7 +101,7 @@ class HomeViewModel @Inject constructor(
         override fun onBatchScanResults(results: MutableList<ScanResult>) {
             results.forEach { result ->
                 if (!foundDevices.containsKey(result.device.address)) {
-                    val device = result.toBleDevice()
+                    val device = result.toBleDevice(context.getString(R.string.mc_unnamed_device))
                     val enriched = loadDeviceWithNameUseCase(device)
                     foundDevices[result.device.address] = enriched
                 }
