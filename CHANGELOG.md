@@ -1,3 +1,10 @@
+# Release 1.3.2
+
+- [x] Updated Android Gradle Plugin to 8.13.2
+- [x] Migrated to Gradle Daemon toolchain (auto-detected/provisioned JDK for the build daemon)
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.3.1...v1.3.2
+
 # Release 1.3.1
 
 - [x] Removed a dead/ineffective manual scroll-capture hint call; Compose already registers scroll capture for scrollable screens on its own
