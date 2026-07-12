@@ -6,7 +6,7 @@
     <string name="mc_matrix_power">Табло Вкл/Выкл</string>
     <string name="mc_manual_brightness">Яркость</string>
     <string name="mc_auto_brightness">Автояркость</string>
-    <string name="mc_hourly_brightness">Расписание яркости</string>
+    <string name="mc_hourly_brightness">Расписание автояркости</string>
     <string name="mc_hourly_brightness_dialog_title">Яркость по часам</string>
     <string name="mc_hourly_brightness_disabled_tip">Расписание применяется только при включённой автояркости</string>
     <string name="mc_aging_offset">Подстроить частоту</string>
@@ -30,4 +30,5 @@
     <string name="mc_dialog_save">Сохранить</string>
     <string name="mc_dialog_device_name">Наименование устройства</string>
     <string name="mc_app_version">Версия приложения: %1$s</string>
+    <string name="mc_app_update_available">Доступна новая версия: %1$s</string>
 </resources>

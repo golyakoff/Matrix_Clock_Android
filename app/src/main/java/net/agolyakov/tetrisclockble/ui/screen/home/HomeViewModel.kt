@@ -8,9 +8,15 @@ import androidx.annotation.RequiresPermission
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.extensions.toBleDevice
+import net.agolyakov.tetrisclockble.data.repository.AppUpdateRepository
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothAdapterProvider
 import net.agolyakov.tetrisclockble.service.bluetooth.BluetoothService
 import net.agolyakov.tetrisclockble.domain.repository.PreferencesRepository
@@ -22,8 +28,13 @@ class HomeViewModel @Inject constructor(
     val bluetoothService: BluetoothService,
     bluetoothAdapterProvider: BluetoothAdapterProvider,
     private val preferencesRepository: PreferencesRepository,
-    private val loadDeviceWithNameUseCase: LoadDeviceWithNameUseCase
+    private val loadDeviceWithNameUseCase: LoadDeviceWithNameUseCase,
+    private val appUpdateRepository: AppUpdateRepository
 ) : ViewModel() {
+    private val _appUpdateState =
+        MutableStateFlow<AppUpdateRepository.UpdateCheckState>(AppUpdateRepository.UpdateCheckState.UpToDate)
+    val appUpdateState: StateFlow<AppUpdateRepository.UpdateCheckState> = _appUpdateState.asStateFlow()
+
     private val foundDevices = HashMap<String, TetrisClockDevice>()
     private val _devices: MutableLiveData<List<TetrisClockDevice>> = MutableLiveData()
     val devices: LiveData<List<TetrisClockDevice>> get() = _devices
@@ -42,6 +53,12 @@ class HomeViewModel @Inject constructor(
             .setServiceUuid(FILTER_UUID)
             .build()
     )
+
+    init {
+        viewModelScope.launch {
+            _appUpdateState.value = appUpdateRepository.checkForUpdate()
+        }
+    }
 
     @RequiresPermission(value = Manifest.permission.BLUETOOTH_SCAN)
     fun startScan() {

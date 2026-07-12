@@ -9,11 +9,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,6 +25,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import net.agolyakov.tetrisclockble.BuildConfig
 import net.agolyakov.tetrisclockble.R
+import net.agolyakov.tetrisclockble.data.repository.AppUpdateRepository
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.navigation.Screen
@@ -34,6 +37,7 @@ fun HomeScreen(
     homeViewModel: HomeViewModel
 ) {
     val devices by homeViewModel.devices.observeAsState(emptyList())
+    val appUpdateState by homeViewModel.appUpdateState.collectAsState()
 
     var showRenameDialog by remember { mutableStateOf(false) }
     var deviceToRename by remember { mutableStateOf<TetrisClockDevice?>(null) }
@@ -54,7 +58,10 @@ fun HomeScreen(
             }
         )
 
-        AppVersionPlaque(appVersion = BuildConfig.VERSION_NAME)
+        AppVersionPlaque(
+            appVersion = BuildConfig.VERSION_NAME,
+            updateState = appUpdateState
+        )
     }
 
     if (showRenameDialog && deviceToRename != null) {
@@ -92,8 +99,11 @@ fun DeviceList(
 @Composable
 fun AppVersionPlaque(
     appVersion: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    updateState: AppUpdateRepository.UpdateCheckState = AppUpdateRepository.UpdateCheckState.UpToDate
 ) {
+    val uriHandler = LocalUriHandler.current
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -103,25 +113,60 @@ fun AppVersionPlaque(
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.size(24.dp)
-            )
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(24.dp)
+                )
 
-            Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(12.dp))
 
-            Text(
-                text = stringResource(R.string.mc_app_version, appVersion),
-                style = MaterialTheme.typography.bodyMedium
-            )
+                Text(
+                    text = stringResource(R.string.mc_app_version, appVersion),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            if (updateState is AppUpdateRepository.UpdateCheckState.UpdateAvailable) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val url = updateState.release.htmlUrl
+                            if (!url.isNullOrBlank()) {
+                                uriHandler.openUri(url)
+                            }
+                        }
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.SystemUpdate,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Text(
+                        text = stringResource(
+                            R.string.mc_app_update_available,
+                            updateState.release.tagName
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
     }
 }

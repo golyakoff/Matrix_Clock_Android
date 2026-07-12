@@ -27,7 +27,8 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object MainModule {
     private val owner = "golyakoff"
-    private val repo = "Matrix_Clock_ESP32"
+    private val firmwareRepo = "Matrix_Clock_ESP32"
+    private val appRepo = "Matrix_Clock_Android"
 
     // Region: Context Providers
     @Provides
@@ -106,7 +107,18 @@ object MainModule {
     ): GithubRepository = GithubRepository(
         githubApiService = githubApiService,
         owner = owner,
-        repo = repo
+        repo = firmwareRepo
+    )
+
+    @Provides
+    @Singleton
+    @AppGithubRepository
+    fun provideAppGitHubRepository(
+        githubApiService: GithubApiService
+    ): GithubRepository = GithubRepository(
+        githubApiService = githubApiService,
+        owner = owner,
+        repo = appRepo
     )
 
     @Provides
