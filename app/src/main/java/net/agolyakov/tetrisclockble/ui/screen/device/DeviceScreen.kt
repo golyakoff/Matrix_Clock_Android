@@ -216,10 +216,15 @@ fun DeviceSettings(
             deviceMacAddress
         )
 
+        MatrixPowerCard(
+            modifier = Modifier,
+            isOn,
+            onSwitchOnOffCheckedChangeAction
+        )
+
         BrightnessCard(
             modifier = Modifier,
             isOn,
-            onSwitchOnOffCheckedChangeAction,
             manualBrightness,
             onSliderBrightnessValueChanged,
             isAutoBrightness,
@@ -311,10 +316,43 @@ fun HeaderCard(
 }
 
 @Composable
+fun MatrixPowerCard(
+    modifier: Modifier,
+    isOn: Boolean,
+    onSwitchOnOffCheckedChangeAction: (Boolean) -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CardTitle(
+                Icons.Default.PowerSettingsNew,
+                stringResource(R.string.mc_matrix_power),
+                true,
+                isOn,
+                onSwitchOnOffCheckedChangeAction,
+                showBottomSpacing = false
+            )
+        }
+    }
+}
+
+@Composable
 fun BrightnessCard(
     modifier: Modifier,
     isOn: Boolean,
-    onSwitchOnOffCheckedChangeAction: (Boolean) -> Unit,
     manualBrightness: Byte,
     onSliderBrightnessValueChanged: (Float) -> Unit,
     isAutoBrightness: Boolean,
@@ -343,28 +381,6 @@ fun BrightnessCard(
         )
         {
             CardTitle(
-                Icons.Default.PowerSettingsNew,
-                stringResource(R.string.mc_matrix_power),
-                true,
-                isOn,
-                onSwitchOnOffCheckedChangeAction
-            )
-
-            CardTitle(
-                Icons.Default.Brightness6,
-                "${stringResource(R.string.mc_manual_brightness)} ${manualBrightness + 1}"
-            )
-
-            // The manual value is ignored by the clock while the hourly schedule drives the brightness.
-            BrightnessSlider(
-                isOn && !isAutoBrightness,
-                manualBrightness,
-                onSliderBrightnessValueChanged,
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            CardTitle(
                 Icons.Default.BrightnessAuto,
                 "${stringResource(R.string.mc_auto_brightness)} ${hourlyBrightness.valueForHour(currentHour) + 1}",
                 true,
@@ -377,6 +393,20 @@ fun BrightnessCard(
                 stringResource(R.string.mc_hourly_brightness),
                 { showHourlyBrightnessDialog = true },
                 false
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            CardTitle(
+                Icons.Default.Brightness6,
+                "${stringResource(R.string.mc_manual_brightness)} ${manualBrightness + 1}"
+            )
+
+            // The manual value is ignored by the clock while the hourly schedule drives the brightness.
+            BrightnessSlider(
+                isOn && !isAutoBrightness,
+                manualBrightness,
+                onSliderBrightnessValueChanged,
             )
 
             HourlyBrightnessDialog(
@@ -975,7 +1005,8 @@ fun CardTitle(
     text: String,
     showSwitch: Boolean = false,
     isOn: Boolean = false,
-    onCheckedChange: (Boolean) -> Unit = {}
+    onCheckedChange: (Boolean) -> Unit = {},
+    showBottomSpacing: Boolean = true
 ) {
     Row (
         modifier = Modifier.fillMaxWidth(),
@@ -1012,7 +1043,9 @@ fun CardTitle(
         }
     }
 
-    Spacer(Modifier.height(16.dp))
+    if (showBottomSpacing) {
+        Spacer(Modifier.height(16.dp))
+    }
 }
 
 @Composable
