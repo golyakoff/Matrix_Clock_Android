@@ -1,3 +1,9 @@
+# Release 1.4.1
+
+- [x] Locked the app to portrait orientation to prevent screen-rotation from restarting the Activity mid-OTA update
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.4.0...v1.4.1
+
 # Release 1.4.0
 
 - [x] Added English as a second app language, switchable in-app via "Язык: English | Русский" on the Home screen (works alongside Android's own per-app language setting on Android 13+)
