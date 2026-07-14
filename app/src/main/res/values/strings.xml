@@ -40,6 +40,9 @@
     <string name="mc_on">ВКЛ</string>
     <string name="mc_off">ВЫКЛ</string>
     <string name="mc_system">Система</string>
+    <string name="mc_pixel_color_order">Порядок цветов пикселя</string>
+    <string name="mc_pixel_color_order_rrggbb">Красный Зелёный Синий</string>
+    <string name="mc_pixel_color_order_rrbbgg">Красный Синий Зелёный</string>
     <string name="mc_clock_firmware_version">Версия прошивки часов: %1$s</string>
     <string name="mc_configure">Настроить</string>
     <string name="mc_language_label">Язык:</string>

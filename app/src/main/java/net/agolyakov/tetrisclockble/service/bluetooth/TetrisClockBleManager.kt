@@ -15,6 +15,7 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessRea
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.HourlyBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.PixelColorOrderReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.RtcTemperatureReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TimeReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOffAlarmReadCharacteristicHandler
@@ -30,6 +31,7 @@ class TetrisClockBleManager(
     val onOffReadCharacteristicHandler: OnOffReadCharacteristicHandler,
     val manualBrightnessReadCharacteristicHandler: ManualBrightnessReadCharacteristicHandler,
     val autoBrightnessReadCharacteristicHandler: AutoBrightnessReadCharacteristicHandler,
+    val colorOrderReadCharacteristicHandler: PixelColorOrderReadCharacteristicHandler,
     val hourlyBrightnessReadCharacteristicHandler: HourlyBrightnessReadCharacteristicHandler,
     var turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler,
     val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
@@ -39,10 +41,12 @@ class TetrisClockBleManager(
 ) : BleManager(context) {
     private val _tag = "TetrisClockBleManager"
     private val _mtuDeferred = CompletableDeferred<Int>()
+    private var _hasRefreshedGattCache = false
     private var mcTimeCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOnOffCharacteristic: BluetoothGattCharacteristic? = null
     private var mcManualBrightValueCharacteristic: BluetoothGattCharacteristic? = null
     private var mcAutoBrightnessCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcColorOrderCharacteristic: BluetoothGattCharacteristic? = null
     private var mcHourlyBrightnessCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOnAlarmCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOffAlarmCharacteristic: BluetoothGattCharacteristic? = null
@@ -58,6 +62,7 @@ class TetrisClockBleManager(
             mcOnOffCharacteristic = service.getCharacteristic(MC_TURN_ON_CONTROL_CHAR_UUID)
             mcManualBrightValueCharacteristic = service.getCharacteristic(MC_MANUAL_BRIGHT_VAL_CHAR_UUID)
             mcAutoBrightnessCharacteristic = service.getCharacteristic(MC_AUTO_BRIGHT_ENABLE_CHAR_UUID)
+            mcColorOrderCharacteristic = service.getCharacteristic(MC_COLOR_ORDER_CHAR_UUID)
             mcHourlyBrightnessCharacteristic = service.getCharacteristic(MC_HOURLY_BRIGHTNESS_CHAR_UUID)
             mcTurnOnAlarmCharacteristic = service.getCharacteristic(MC_TURN_ON_ALARM_CHAR_UUID)
             mcTurnOffAlarmCharacteristic = service.getCharacteristic(MC_TURN_OFF_ALARM_CHAR_UUID)
@@ -82,6 +87,7 @@ class TetrisClockBleManager(
                 //&& mcOtaControlCharacteristic != null
                 //&& mcOtaDataCharacteristic != null
                 //&& mcHourlyBrightnessCharacteristic != null
+                //&& mcColorOrderCharacteristic != null
     }
 
     override fun onServicesInvalidated() {
@@ -89,6 +95,7 @@ class TetrisClockBleManager(
         mcOnOffCharacteristic = null
         mcManualBrightValueCharacteristic = null
         mcAutoBrightnessCharacteristic = null
+        mcColorOrderCharacteristic = null
         mcHourlyBrightnessCharacteristic = null
         mcTurnOnAlarmCharacteristic = null
         mcTurnOffAlarmCharacteristic = null
@@ -101,6 +108,16 @@ class TetrisClockBleManager(
 
     override fun initialize() {
         super.initialize()
+        // The ESP32 firmware doesn't send a Service Changed indication when its GATT table
+        // gains new characteristics between firmware updates, so Android would otherwise keep
+        // serving a stale cached service list (silently failing to find/write new
+        // characteristics) until the phone's Bluetooth cache is cleared some other way.
+        // Refreshing triggers the library to rediscover services and call initialize() again
+        // on its own, so this must run only once per manager instance or it loops forever.
+        if (!_hasRefreshedGattCache) {
+            _hasRefreshedGattCache = true
+            refreshDeviceCache().enqueue()
+        }
         setupNotifications()
         setupMtu()
     }
@@ -196,6 +213,19 @@ class TetrisClockBleManager(
     fun getAutoBrightnessCharacteristic() {
         autoBrightnessReadCharacteristicHandler.let {
             readCharacteristic(mcAutoBrightnessCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
+    }
+
+    fun getColorOrderCharacteristic() {
+        colorOrderReadCharacteristicHandler.let {
+            readCharacteristic(mcColorOrderCharacteristic)
                 .with { device: BluetoothDevice?, data: Data? ->
                     it.onReadCharacteristicCallback(
                         device!!,
@@ -316,6 +346,14 @@ class TetrisClockBleManager(
         ).enqueue()
     }
 
+    fun setColorOrderCharacteristic(useRrbbgg: Boolean) {
+        writeCharacteristic(
+            mcColorOrderCharacteristic,
+            byteArrayOf((if (useRrbbgg) CMD_CONTROL_LED_ON else CMD_CONTROL_LED_OFF).toByte()),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
+    }
+
     fun setHourlyBrightnessCharacteristic(hourlyBrightness: TetrisClockHourlyBrightness) {
         writeCharacteristic(
             mcHourlyBrightnessCharacteristic,
@@ -398,6 +436,11 @@ class TetrisClockBleManager(
         // Possible values are 0..15 (0 is not fully Off, just minimum value)
         // Mode: Read, Write
         val MC_MANUAL_BRIGHT_VAL_CHAR_UUID: UUID = UUID.fromString("117ED80D-AF6E-4E4D-B900-48F68725A7D3")
+
+        // Control point to switch the LED matrix pixel color order.
+        // 0 = RRGGBB (default), 1 = RRBBGG (green/blue swapped, red unchanged)
+        // Mode: Read, Write
+        val MC_COLOR_ORDER_CHAR_UUID: UUID = UUID.fromString("36B8588D-6F99-4BDC-8B6F-13089F234978")
 
         // Hourly brightness schedule: 24 brightness nibbles (0..15), one per hour of day
         // (index 0 = 00h..00:59, ... index 23 = 23h..23:59).

@@ -5,6 +5,8 @@ package net.agolyakov.tetrisclockble.ui.screen.device
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,6 +45,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -62,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,6 +96,7 @@ fun DeviceScreen(
     val isOn: Boolean by viewModel.tetrisClockTetrisOn.collectAsState()
     val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
     val isAutoBrightness: Boolean by viewModel.tetrisClockIsAutoBrightness.collectAsState()
+    val isRrbbggColorOrder: Boolean by viewModel.tetrisClockIsRrbbggColorOrder.collectAsState()
     val hourlyBrightness: TetrisClockHourlyBrightness by viewModel.tetrisClockHourlyBrightness.collectAsState()
     val bleTime: TetrisClockTime by viewModel.tetrisClockBleDeviceTime.collectAsState()
     var phoneTime: TetrisClockTime by remember { mutableStateOf(TetrisClockTime.now()) }
@@ -155,6 +160,10 @@ fun DeviceScreen(
             viewModel.setAgingOffsetCharacteristic(newValue)
         },
         rtcTemperature = rtcTemperature,
+        isRrbbggColorOrder = isRrbbggColorOrder,
+        onColorOrderSelected = { useRrbbgg ->
+            viewModel.setColorOrderCharacteristic(useRrbbgg)
+        },
         turnOnAlarm = turnOnAlarm,
         turnOnAlarmOnTimeClick = {
             viewModel.showTimePickerDialog(TetrisClockAlarmType.TURN_ON, turnOnAlarm)
@@ -194,6 +203,8 @@ fun DeviceSettings(
     agingOffset: Int,
     onAgingOffsetDialogValueChanged: (Int) -> Unit,
     rtcTemperature: Float,
+    isRrbbggColorOrder: Boolean,
+    onColorOrderSelected: (Boolean) -> Unit,
     turnOnAlarm: TetrisClockAlarm,
     turnOnAlarmOnTimeClick: () -> Unit,
     turnOnAlarmOnActiveToggle: () -> Unit,
@@ -258,7 +269,9 @@ fun DeviceSettings(
             modifier = Modifier,
             firmwareVersion,
             onFirmwareUpdateButtonClickAction,
-            rtcTemperature
+            rtcTemperature,
+            isRrbbggColorOrder,
+            onColorOrderSelected
         )
     }
 }
@@ -946,7 +959,9 @@ fun SystemInfoCard(
     modifier: Modifier,
     firmwareVersion: String,
     onFirmwareUpdateButtonClickAction: () -> Unit,
-    rtcTemperature: Float
+    rtcTemperature: Float,
+    isRrbbggColorOrder: Boolean,
+    onColorOrderSelected: (Boolean) -> Unit
 ) {
     Card(
         modifier = modifier
@@ -969,6 +984,13 @@ fun SystemInfoCard(
                 Icons.Default.PermDeviceInformation,
                 stringResource(R.string.mc_system)
             )
+
+            PixelColorOrderSelector(
+                isRrbbgg = isRrbbggColorOrder,
+                onSelected = onColorOrderSelected
+            )
+
+            Spacer(Modifier.height(16.dp))
 
             Text(
                 modifier = Modifier.fillMaxWidth(),
@@ -995,6 +1017,64 @@ fun SystemInfoCard(
                 stringResource(R.string.mc_firmware_update_title),
                 onFirmwareUpdateButtonClickAction,
                 false
+            )
+        }
+    }
+}
+
+@Composable
+fun PixelColorOrderSelector(
+    isRrbbgg: Boolean,
+    onSelected: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectableGroup()
+    ) {
+        Text(
+            text = stringResource(R.string.mc_pixel_color_order),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = !isRrbbgg,
+                    onClick = { onSelected(false) },
+                    role = Role.RadioButton
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = !isRrbbgg,
+                onClick = null
+            )
+            Text(
+                text = stringResource(R.string.mc_pixel_color_order_rrggbb),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = isRrbbgg,
+                    onClick = { onSelected(true) },
+                    role = Role.RadioButton
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isRrbbgg,
+                onClick = null
+            )
+            Text(
+                text = stringResource(R.string.mc_pixel_color_order_rrbbgg),
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
@@ -1122,6 +1202,8 @@ fun DeviceSettings_State1_Preview(){
             agingOffset = 5,
             onAgingOffsetDialogValueChanged = {},
             rtcTemperature = 21.25F,
+            isRrbbggColorOrder = false,
+            onColorOrderSelected = {},
             turnOnAlarm = TetrisClockAlarm(
                 isActive = true,
                 hours = 6,
@@ -1171,6 +1253,8 @@ fun DeviceSettings_State2_Preview(){
             agingOffset = -108,
             onAgingOffsetDialogValueChanged = {},
             rtcTemperature = -10.25F,
+            isRrbbggColorOrder = true,
+            onColorOrderSelected = {},
             turnOnAlarm = TetrisClockAlarm(
                 isActive = false,
                 hours = 6,

@@ -70,6 +70,7 @@ class DeviceViewModel @Inject constructor(
     val tetrisClockTetrisOn = bluetoothService.tetrisClockIsOn
     val tetrisClockManualBrightness = bluetoothService.tetrisClockManualBrightness
     val tetrisClockIsAutoBrightness = bluetoothService.tetrisClockIsAutoBrightness
+    val tetrisClockIsRrbbggColorOrder = bluetoothService.tetrisClockIsRrbbggColorOrder
     val tetrisClockHourlyBrightness = bluetoothService.tetrisClockHourlyBrightness
     val tetrisClockTurnOnAlarm = bluetoothService.tetrisClockTurnOnAlarm
     var tetrisClockTurnOffAlarm = bluetoothService.tetrisClockTurnOffAlarm
@@ -160,6 +161,10 @@ class DeviceViewModel @Inject constructor(
 
     fun toggleAutoBrightnessCharacteristic() {
         bluetoothService.toggleAutoBrightnessCharacteristic()
+    }
+
+    fun setColorOrderCharacteristic(useRrbbgg: Boolean) {
+        bluetoothService.setColorOrderCharacteristic(useRrbbgg)
     }
 
     fun setHourlyBrightnessCharacteristic(hourlyBrightness: TetrisClockHourlyBrightness) {

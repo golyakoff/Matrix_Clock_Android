@@ -26,6 +26,7 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessRea
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.HourlyBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.PixelColorOrderReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.RtcTemperatureReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TimeReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOffAlarmReadCharacteristicHandler
@@ -102,6 +103,14 @@ class BluetoothService @Inject constructor(
         _tetrisClockIsAutoBrightness
     )
 
+    // LED Matrix Pixel Color Order (false = RRGGBB default, true = RRBBGG)
+    private var _isRrbbggColorOrder: Boolean = false
+    private val _tetrisClockIsRrbbggColorOrder = MutableStateFlow(_isRrbbggColorOrder)
+    val tetrisClockIsRrbbggColorOrder: StateFlow<Boolean> = _tetrisClockIsRrbbggColorOrder
+    private val colorOrderReadCharacteristicHandler = PixelColorOrderReadCharacteristicHandler(
+        _tetrisClockIsRrbbggColorOrder
+    )
+
     // Hourly Brightness Schedule (used as the auto brightness source)
     private var _hourlyBrightnessState: TetrisClockHourlyBrightness = TetrisClockHourlyBrightness()
     private val _tetrisClockHourlyBrightness = MutableStateFlow(_hourlyBrightnessState)
@@ -157,6 +166,7 @@ class BluetoothService @Inject constructor(
         onOffReadCharacteristicHandler,
         manualBrightnessReadCharacteristicHandler,
         autoBrightnessReadCharacteristicHandler,
+        colorOrderReadCharacteristicHandler,
         hourlyBrightnessReadCharacteristicHandler,
         turnOnAlarmReadCharacteristicHandler,
         turnOffAlarmReadCharacteristicHandler,
@@ -189,6 +199,7 @@ class BluetoothService @Inject constructor(
 
         override fun onDeviceDisconnected(device: BluetoothDevice, reason: Int) {
             _connectionState.value = ConnectionState.Disconnected
+            tryReconnect()
         }
     }
 
@@ -216,6 +227,9 @@ class BluetoothService @Inject constructor(
         _isAutoBrightness = false
         _tetrisClockIsAutoBrightness.value = _isAutoBrightness
 
+        _isRrbbggColorOrder = false
+        _tetrisClockIsRrbbggColorOrder.value = _isRrbbggColorOrder
+
         _turnOnAlarm = TetrisClockAlarm()
         _tetrisClockTurnOnAlarm.value = _turnOnAlarm
 
@@ -229,7 +243,7 @@ class BluetoothService @Inject constructor(
         _tetrisClockRtcTemperature.value = _rtcTemperatureState
     }
 
-    fun connect(tetrisClockDevice: TetrisClockDevice) {
+    fun connect(tetrisClockDevice: TetrisClockDevice, useAutoConnect: Boolean = false) {
         if (_connectionState.value is ConnectionState.Connecting ||
             _connectionState.value is ConnectionState.Connected) {
             Log.w(_tag, "Already connecting/connected, ignoring new connection request")
@@ -242,7 +256,7 @@ class BluetoothService @Inject constructor(
         val device = bluetoothAdapterProvider.getAdapter().getRemoteDevice(tetrisClockDevice.macAddress)
         bleManager.connect(device)
             .retry(2, 100)
-            .useAutoConnect(false)
+            .useAutoConnect(useAutoConnect)
             .done {
                 _currentDevice.value = tetrisClockDevice
                 _lastConnectedDevice = tetrisClockDevice
@@ -291,7 +305,10 @@ class BluetoothService @Inject constructor(
                 _connectionState.value is ConnectionState.Disconnected)
             {
                 Log.i(_tag, "Reconnecting to last device: ${it.deviceName}")
-                connect(it)
+                // Auto-connect: the device may be unreachable right now (e.g. rebooting), so let
+                // Android wait and connect as soon as it starts advertising again, rather than
+                // failing immediately like the initial user-initiated connect does.
+                connect(it, useAutoConnect = true)
             }
         }
     }
@@ -301,6 +318,7 @@ class BluetoothService @Inject constructor(
         bleManager.getOnOffCharacteristic()
         bleManager.getManualBrightnessCharacteristic()
         bleManager.getAutoBrightnessCharacteristic()
+        bleManager.getColorOrderCharacteristic()
         bleManager.getHourlyBrightnessCharacteristic()
         bleManager.getTurnOnAlarmCharacteristic()
         bleManager.getTurnOffAlarmCharacteristic()
@@ -359,6 +377,15 @@ class BluetoothService @Inject constructor(
 
         if (bleManager.isReady) {
             bleManager.setAutoBrightnessCharacteristic(isAuto)
+        }
+    }
+
+    fun setColorOrderCharacteristic(useRrbbgg: Boolean) {
+        _isRrbbggColorOrder = useRrbbgg
+        _tetrisClockIsRrbbggColorOrder.value = useRrbbgg
+
+        if (bleManager.isReady) {
+            bleManager.setColorOrderCharacteristic(useRrbbgg)
         }
     }
 

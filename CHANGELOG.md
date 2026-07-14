@@ -1,3 +1,10 @@
+# Release 1.5.0
+
+- [x] Added a pixel color order setting (RRGGBB vs RRBBGG) to the System card, backed by clock firmware v1.3.0's new BLE characteristic
+- [x] The app now auto-reconnects if the clock disconnects (e.g. reboots) while the device screen is open
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.4.1...v1.5.0
+
 # Release 1.4.1
 
 - [x] Locked the app to portrait orientation to prevent screen-rotation from restarting the Activity mid-OTA update
