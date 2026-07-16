@@ -122,6 +122,12 @@ class TetrisClockBleManager(
         setupMtu()
     }
 
+    /**
+     * Negotiated ATT MTU (suspends until the MTU exchange completes after connect).
+     * OTA chunks must not exceed MTU-3 or Android falls back to slow long writes.
+     */
+    suspend fun awaitNegotiatedMtu(): Int = _mtuDeferred.await()
+
     private fun setupMtu() {
         requestMtu(BLE_MTU)
             .with { device, mtu ->

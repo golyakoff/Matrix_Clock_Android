@@ -496,4 +496,6 @@ class BluetoothService @Inject constructor(
             }
         }
     }
+
+    suspend fun getNegotiatedMtu(): Int = bleManager.awaitNegotiatedMtu()
 }

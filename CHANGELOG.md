@@ -1,3 +1,9 @@
+# Release 1.5.1
+
+- [x] Much faster firmware OTA upload: removed the fixed 30 ms pause after every 512-byte chunk (~1.5 min of pure sleep per update); flow control now relies on the clock's own write queue, and the chunk size follows the negotiated MTU
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.5.0...v1.5.1
+
 # Release 1.5.0
 
 - [x] Added a pixel color order setting (RRGGBB vs RRBBGG) to the System card, backed by clock firmware v1.3.0's new BLE characteristic
