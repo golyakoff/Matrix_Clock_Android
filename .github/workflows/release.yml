@@ -80,3 +80,15 @@ jobs:
           body: ${{ steps.changelog.outputs.content }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to RuStore
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          chmod +x .github/scripts/rustore-publish.sh
+          export APK_PATH="$(ls app/build/outputs/apk/release/*.apk | head -n1)"
+          .github/scripts/rustore-publish.sh
+        env:
+          RUSTORE_KEY_ID: ${{ secrets.RUSTORE_TETRIS_CLOCK_PRIVATE_KEY_ID }}
+          RUSTORE_PRIVATE_KEY: ${{ secrets.RUSTORE_TETRIS_CLOCK_PRIVATE_KEY }}
+          PACKAGE_NAME: net.agolyakov.tetrisclockble
+          WHATS_NEW: ${{ steps.changelog.outputs.content }}
