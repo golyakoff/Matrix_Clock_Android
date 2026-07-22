@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -141,13 +142,30 @@ fun DeviceList(
     modifier: Modifier = Modifier,
     onRenameClick: (TetrisClockDevice) -> Unit
 ) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        itemsIndexed(deviceList) { _, item ->
-            Device(item, navController, onRenameClick)
+    if (deviceList.isEmpty()) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .padding(horizontal = 32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.mc_no_devices_found),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+        ) {
+            itemsIndexed(deviceList) { _, item ->
+                Device(item, navController, onRenameClick)
+            }
         }
     }
 }
@@ -359,5 +377,21 @@ fun DeviceListPreview_2() {
     TetrisClockBLETheme(darkTheme = true) {
         val deviceList = DeviceRepository().getDeviceList()
         DeviceList(deviceList, rememberNavController()) {}
+    }
+}
+
+@Composable
+@Preview(name = "Empty - Light", heightDp = 800, showBackground = false)
+fun DeviceListEmptyPreview_1() {
+    TetrisClockBLETheme(darkTheme = false) {
+        DeviceList(emptyList(), rememberNavController()) {}
+    }
+}
+
+@Composable
+@Preview(name = "Empty - Dark", heightDp = 800, showBackground = true)
+fun DeviceListEmptyPreview_2() {
+    TetrisClockBLETheme(darkTheme = true) {
+        DeviceList(emptyList(), rememberNavController()) {}
     }
 }

@@ -1,3 +1,9 @@
+# Release 1.6.0
+
+- [x] The Home screen now shows a hint when no clocks are nearby ("No Tetris Clocks found nearby. Make sure the device is powered on and within 10 meters.") in the device-list area instead of a blank screen
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.5.1...v1.6.0
+
 # Release 1.5.1
 
 - [x] Much faster firmware OTA upload: removed the fixed 30 ms pause after every 512-byte chunk (~1.5 min of pure sleep per update); flow control now relies on the clock's own write queue, and the chunk size follows the negotiated MTU
