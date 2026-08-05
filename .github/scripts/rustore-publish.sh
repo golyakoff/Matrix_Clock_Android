@@ -23,14 +23,30 @@ WHATS_NEW="${WHATS_NEW:-}"
 
 [ -f "$APK_PATH" ] || { echo "APK not found: $APK_PATH" >&2; exit 1; }
 
-# The console hands out a bare base64 DER key; openssl needs PEM framing.
+# Accept the RuStore private key in either form:
+#  - a full PEM block (-----BEGIN [RSA] PRIVATE KEY----- ... -----END-----), which is the natural
+#    thing to paste into a secret: used as-is, only normalizing CRLF and any literal "\n"; or
+#  - the bare base64 PKCS#8 DER the console shows (no headers): wrapped in PEM framing.
+# The old code always did the second, so a PEM-in-secret got its headers mangled by `tr -d`, which
+# is the "Could not read private key" openssl failure.
 KEY_PEM="$(mktemp)"
 trap 'rm -f "$KEY_PEM"' EXIT
-{
-  echo "-----BEGIN PRIVATE KEY-----"
-  echo "$RUSTORE_PRIVATE_KEY" | tr -d ' \n\r' | fold -w 64
-  echo "-----END PRIVATE KEY-----"
-} > "$KEY_PEM"
+if printf '%s' "$RUSTORE_PRIVATE_KEY" | grep -q -- "-----BEGIN"; then
+  printf '%s' "$RUSTORE_PRIVATE_KEY" | sed 's/\\n/\n/g' | tr -d '\r' > "$KEY_PEM"
+else
+  {
+    echo "-----BEGIN PRIVATE KEY-----"
+    printf '%s' "$RUSTORE_PRIVATE_KEY" | tr -d ' \t\n\r' | fold -w 64
+    echo "-----END PRIVATE KEY-----"
+  } > "$KEY_PEM"
+fi
+
+# Fail early with an actionable message instead of the opaque openssl error from the signing step.
+if ! openssl pkey -in "$KEY_PEM" -noout 2>/dev/null; then
+  echo "RuStore private key could not be parsed from the RUSTORE_..._PRIVATE_KEY secret." >&2
+  echo "Store either a full PEM private key block, or the bare base64 PKCS#8 key from the RuStore console." >&2
+  exit 1
+fi
 
 # --- 1. auth: signature is SHA512withRSA over (keyId + timestamp), base64 ---
 TIMESTAMP="$(date +%Y-%m-%dT%H:%M:%S.%3N%:z)"
