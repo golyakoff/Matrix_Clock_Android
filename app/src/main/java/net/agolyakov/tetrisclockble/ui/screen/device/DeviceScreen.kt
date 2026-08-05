@@ -82,8 +82,10 @@ import androidx.navigation.NavHostController
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.navigation.Screen
-import net.agolyakov.tetrisclockble.data.model.ble.DaySplashAnimation
-import net.agolyakov.tetrisclockble.data.model.ble.DaySplashAnimations
+import net.agolyakov.tetrisclockble.data.model.ble.SplashAnimation
+import net.agolyakov.tetrisclockble.data.model.ble.SplashAnimations
+import net.agolyakov.tetrisclockble.data.model.ble.SplashDuration
+import net.agolyakov.tetrisclockble.data.model.ble.SplashMode
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
@@ -105,7 +107,7 @@ fun DeviceScreen(
     val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
     val isAutoBrightness: Boolean by viewModel.tetrisClockIsAutoBrightness.collectAsState()
     val isRrbbggColorOrder: Boolean by viewModel.tetrisClockIsRrbbggColorOrder.collectAsState()
-    val daySplash by viewModel.tetrisClockDaySplash.collectAsState()
+    val animationSplash by viewModel.tetrisClockAnimationSplash.collectAsState()
     val hourlyBrightness: TetrisClockHourlyBrightness by viewModel.tetrisClockHourlyBrightness.collectAsState()
     val bleTime: TetrisClockTime by viewModel.tetrisClockBleDeviceTime.collectAsState()
     var phoneTime: TetrisClockTime by remember { mutableStateOf(TetrisClockTime.now()) }
@@ -173,16 +175,24 @@ fun DeviceScreen(
         onColorOrderSelected = { useRrbbgg ->
             viewModel.setColorOrderCharacteristic(useRrbbgg)
         },
-        daySplashEnabled = daySplash.enabled,
-        onDaySplashEnabledChange = { enabled ->
-            viewModel.setDaySplashEnabled(enabled)
+        splashEnabled = animationSplash.enabled,
+        splashMode = animationSplash.mode,
+        splashDuration = animationSplash.durationValue,
+        onSplashEnabledChange = { enabled ->
+            viewModel.setSplashEnabled(enabled)
         },
-        daySplashAnimations = viewModel.daySplashAnimations,
-        daySplashSelectedIndex = daySplash.animationIndex,
-        onDaySplashAnimationSelected = { index ->
-            viewModel.setDaySplashAnimation(index)
+        onSplashModeSelected = { mode ->
+            viewModel.setSplashMode(mode)
         },
-        onDaySplashPreview = { viewModel.previewDaySplash() },
+        onSplashDurationSelected = { duration ->
+            viewModel.setSplashDuration(duration)
+        },
+        splashAnimations = viewModel.splashAnimations,
+        splashSelectedIndex = animationSplash.animationIndex,
+        onSplashAnimationSelected = { index ->
+            viewModel.setSplashAnimation(index)
+        },
+        onSplashPreview = { viewModel.previewSplash() },
         turnOnAlarm = turnOnAlarm,
         turnOnAlarmOnTimeClick = {
             viewModel.showTimePickerDialog(TetrisClockAlarmType.TURN_ON, turnOnAlarm)
@@ -224,12 +234,16 @@ fun DeviceSettings(
     rtcTemperature: Float,
     isRrbbggColorOrder: Boolean,
     onColorOrderSelected: (Boolean) -> Unit,
-    daySplashEnabled: Boolean,
-    onDaySplashEnabledChange: (Boolean) -> Unit,
-    daySplashAnimations: List<DaySplashAnimation>,
-    daySplashSelectedIndex: Int,
-    onDaySplashAnimationSelected: (Int) -> Unit,
-    onDaySplashPreview: () -> Unit,
+    splashEnabled: Boolean,
+    splashMode: Int,
+    splashDuration: Int,
+    onSplashEnabledChange: (Boolean) -> Unit,
+    onSplashModeSelected: (Int) -> Unit,
+    onSplashDurationSelected: (Int) -> Unit,
+    splashAnimations: List<SplashAnimation>,
+    splashSelectedIndex: Int,
+    onSplashAnimationSelected: (Int) -> Unit,
+    onSplashPreview: () -> Unit,
     turnOnAlarm: TetrisClockAlarm,
     turnOnAlarmOnTimeClick: () -> Unit,
     turnOnAlarmOnActiveToggle: () -> Unit,
@@ -290,14 +304,18 @@ fun DeviceSettings(
             turnOffAlarmOnActiveToggle
         )
 
-        DaySplashCard(
+        SplashCard(
             modifier = Modifier,
-            enabled = daySplashEnabled,
-            onEnabledChange = onDaySplashEnabledChange,
-            animations = daySplashAnimations,
-            selectedIndex = daySplashSelectedIndex,
-            onAnimationSelected = onDaySplashAnimationSelected,
-            onPreview = onDaySplashPreview
+            enabled = splashEnabled,
+            mode = splashMode,
+            duration = splashDuration,
+            onEnabledChange = onSplashEnabledChange,
+            onModeSelected = onSplashModeSelected,
+            onDurationSelected = onSplashDurationSelected,
+            animations = splashAnimations,
+            selectedIndex = splashSelectedIndex,
+            onAnimationSelected = onSplashAnimationSelected,
+            onPreview = onSplashPreview
         )
 
         SystemInfoCard(
@@ -1116,11 +1134,15 @@ fun PixelColorOrderSelector(
 }
 
 @Composable
-fun DaySplashCard(
+fun SplashCard(
     modifier: Modifier,
     enabled: Boolean,
+    mode: Int,
+    duration: Int,
     onEnabledChange: (Boolean) -> Unit,
-    animations: List<DaySplashAnimation>,
+    onModeSelected: (Int) -> Unit,
+    onDurationSelected: (Int) -> Unit,
+    animations: List<SplashAnimation>,
     selectedIndex: Int,
     onAnimationSelected: (Int) -> Unit,
     onPreview: () -> Unit
@@ -1143,53 +1165,194 @@ fun DaySplashCard(
         ) {
             CardTitle(
                 imageVector = Icons.Default.Pets,
-                text = stringResource(R.string.mc_day_splash_title),
+                text = stringResource(R.string.mc_splash_title),
                 showSwitch = true,
                 isOn = enabled,
                 onCheckedChange = onEnabledChange
             )
 
+            // Text follows the current state: a general blurb when off, the cadence-specific
+            // description when on.
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = stringResource(R.string.mc_day_splash_hint),
+                text = if (enabled) splashModeHint(mode) else stringResource(R.string.mc_splash_hint_off),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline
             )
 
-            Spacer(Modifier.height(16.dp))
+            if (enabled) {
+                Spacer(Modifier.height(16.dp))
 
-            DaySplashAnimationPicker(
-                animations = animations,
-                selectedIndex = selectedIndex,
-                onAnimationSelected = onAnimationSelected
-            )
+                SplashFrequencyPicker(
+                    selectedMode = mode,
+                    onModeSelected = onModeSelected
+                )
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            CardButtonWide(
-                imageVector = Icons.Default.PlayArrow,
-                text = stringResource(R.string.mc_day_splash_preview),
-                onClickAction = onPreview,
-                isPrimary = false
-            )
+                SplashDurationPicker(
+                    selectedDuration = duration,
+                    onDurationSelected = onDurationSelected
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                SplashAnimationPicker(
+                    animations = animations,
+                    selectedIndex = selectedIndex,
+                    onAnimationSelected = onAnimationSelected
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                CardButtonWide(
+                    imageVector = Icons.Default.PlayArrow,
+                    text = stringResource(R.string.mc_splash_preview),
+                    onClickAction = onPreview,
+                    isPrimary = false
+                )
+            }
+        }
+    }
+}
+
+// Human-readable cadence label for a splash mode value (used in the frequency dropdown).
+@Composable
+fun splashModeLabel(mode: Int): String = when (mode) {
+    SplashMode.EVERY_3H.value -> stringResource(R.string.mc_splash_freq_3h)
+    SplashMode.HOURLY.value -> stringResource(R.string.mc_splash_freq_hourly)
+    else -> stringResource(R.string.mc_splash_freq_daily)
+}
+
+// Cadence-specific description shown under the title when the feature is on.
+@Composable
+fun splashModeHint(mode: Int): String = when (mode) {
+    SplashMode.EVERY_3H.value -> stringResource(R.string.mc_splash_hint_3h)
+    SplashMode.HOURLY.value -> stringResource(R.string.mc_splash_hint_hourly)
+    else -> stringResource(R.string.mc_splash_hint_daily)
+}
+
+// Human-readable label for a duration value, e.g. "20 s" (used in the duration dropdown).
+@Composable
+fun splashDurationLabel(duration: Int): String =
+    stringResource(R.string.mc_splash_duration_seconds, SplashDuration.fromValue(duration).seconds)
+
+@Composable
+fun SplashDurationPicker(
+    selectedDuration: Int,
+    onDurationSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.mc_splash_duration_label),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = splashDurationLabel(selectedDuration),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                SplashDuration.all.forEach { splashDuration ->
+                    DropdownMenuItem(
+                        text = { Text(splashDurationLabel(splashDuration.value)) },
+                        onClick = {
+                            expanded = false
+                            onDurationSelected(splashDuration.value)
+                        }
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun DaySplashAnimationPicker(
-    animations: List<DaySplashAnimation>,
+fun SplashFrequencyPicker(
+    selectedMode: Int,
+    onModeSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.mc_splash_frequency_label),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = splashModeLabel(selectedMode),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                SplashMode.selectable.forEach { splashMode ->
+                    DropdownMenuItem(
+                        text = { Text(splashModeLabel(splashMode.value)) },
+                        onClick = {
+                            expanded = false
+                            onModeSelected(splashMode.value)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SplashAnimationPicker(
+    animations: List<SplashAnimation>,
     selectedIndex: Int,
     onAnimationSelected: (Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedName = animations.firstOrNull { it.index == selectedIndex }?.name
-        ?: animations.firstOrNull()?.name
-        ?: ""
+    val selectedAnimation = animations.firstOrNull { it.index == selectedIndex }
+        ?: animations.firstOrNull()
+    val selectedName = selectedAnimation?.let { stringResource(it.nameRes) } ?: ""
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
-            text = stringResource(R.string.mc_day_splash_animation_label),
+            text = stringResource(R.string.mc_splash_animation_label),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.outline
         )
@@ -1219,7 +1382,7 @@ fun DaySplashAnimationPicker(
             ) {
                 animations.forEach { animation ->
                     DropdownMenuItem(
-                        text = { Text(animation.name) },
+                        text = { Text(stringResource(animation.nameRes)) },
                         onClick = {
                             expanded = false
                             onAnimationSelected(animation.index)
@@ -1355,12 +1518,16 @@ fun DeviceSettings_State1_Preview(){
             rtcTemperature = 21.25F,
             isRrbbggColorOrder = false,
             onColorOrderSelected = {},
-            daySplashEnabled = true,
-            onDaySplashEnabledChange = {},
-            daySplashAnimations = DaySplashAnimations.all,
-            daySplashSelectedIndex = 0,
-            onDaySplashAnimationSelected = {},
-            onDaySplashPreview = {},
+            splashEnabled = true,
+            splashMode = SplashMode.EVERY_3H.value,
+            splashDuration = SplashDuration.S20.value,
+            onSplashEnabledChange = {},
+            onSplashModeSelected = {},
+            onSplashDurationSelected = {},
+            splashAnimations = SplashAnimations.all,
+            splashSelectedIndex = 0,
+            onSplashAnimationSelected = {},
+            onSplashPreview = {},
             turnOnAlarm = TetrisClockAlarm(
                 isActive = true,
                 hours = 6,
@@ -1412,12 +1579,16 @@ fun DeviceSettings_State2_Preview(){
             rtcTemperature = -10.25F,
             isRrbbggColorOrder = true,
             onColorOrderSelected = {},
-            daySplashEnabled = false,
-            onDaySplashEnabledChange = {},
-            daySplashAnimations = DaySplashAnimations.all,
-            daySplashSelectedIndex = 0,
-            onDaySplashAnimationSelected = {},
-            onDaySplashPreview = {},
+            splashEnabled = false,
+            splashMode = SplashMode.OFF.value,
+            splashDuration = SplashDuration.S10.value,
+            onSplashEnabledChange = {},
+            onSplashModeSelected = {},
+            onSplashDurationSelected = {},
+            splashAnimations = SplashAnimations.all,
+            splashSelectedIndex = 0,
+            onSplashAnimationSelected = {},
+            onSplashPreview = {},
             turnOnAlarm = TetrisClockAlarm(
                 isActive = false,
                 hours = 6,

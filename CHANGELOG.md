@@ -1,3 +1,10 @@
+# Release 1.8.0
+
+- [x] Reworked the "Day splash" card into a "Splash" card matching clock firmware v1.5.0: turning it on now reveals a frequency picker (once a day / every 3 hours / every hour), a duration picker (10 / 20 / 40 / 60 seconds) and the animation picker, with a description under the title that updates to match the selected frequency. "Preview splash" plays the selected animation on the device for the chosen duration
+- [x] The animation picker now offers a second animation, "Russian flag" (Флаг России), alongside Nyan Cat
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.7.0...v1.8.0
+
 # Release 1.7.0
 
 - [x] Added a "Day splash" card (between Scenarios and System) for clock firmware v1.4.0's new easter egg: an animated screensaver the clock plays over the 00:00 minute at the day boundary instead of the usual Tetris digits. Toggle it on/off, pick the animation from a dropdown (Nyan Cat for now), and preview the selected one on the device right away with the "Preview splash" button

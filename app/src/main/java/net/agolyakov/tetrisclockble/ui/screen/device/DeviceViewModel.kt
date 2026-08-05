@@ -12,7 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
-import net.agolyakov.tetrisclockble.data.model.ble.DaySplashAnimations
+import net.agolyakov.tetrisclockble.data.model.ble.SplashAnimations
+import net.agolyakov.tetrisclockble.data.model.ble.SplashMode
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
@@ -72,8 +73,8 @@ class DeviceViewModel @Inject constructor(
     val tetrisClockManualBrightness = bluetoothService.tetrisClockManualBrightness
     val tetrisClockIsAutoBrightness = bluetoothService.tetrisClockIsAutoBrightness
     val tetrisClockIsRrbbggColorOrder = bluetoothService.tetrisClockIsRrbbggColorOrder
-    val tetrisClockDaySplash = bluetoothService.tetrisClockDaySplash
-    val daySplashAnimations = DaySplashAnimations.all
+    val tetrisClockAnimationSplash = bluetoothService.tetrisClockAnimationSplash
+    val splashAnimations = SplashAnimations.all
     val tetrisClockHourlyBrightness = bluetoothService.tetrisClockHourlyBrightness
     val tetrisClockTurnOnAlarm = bluetoothService.tetrisClockTurnOnAlarm
     var tetrisClockTurnOffAlarm = bluetoothService.tetrisClockTurnOffAlarm
@@ -170,16 +171,33 @@ class DeviceViewModel @Inject constructor(
         bluetoothService.setColorOrderCharacteristic(useRrbbgg)
     }
 
-    fun setDaySplashEnabled(enabled: Boolean) {
-        bluetoothService.setDaySplashCharacteristic(enabled, tetrisClockDaySplash.value.animationIndex)
+    fun setSplashEnabled(enabled: Boolean) {
+        val current = tetrisClockAnimationSplash.value
+        val mode = when {
+            !enabled -> SplashMode.OFF.value
+            current.mode == SplashMode.OFF.value -> SplashMode.DEFAULT_ON.value
+            else -> current.mode
+        }
+        bluetoothService.setAnimationSplashCharacteristic(mode, current.durationValue, current.animationIndex)
     }
 
-    fun setDaySplashAnimation(index: Int) {
-        bluetoothService.setDaySplashCharacteristic(tetrisClockDaySplash.value.enabled, index)
+    fun setSplashMode(mode: Int) {
+        val current = tetrisClockAnimationSplash.value
+        bluetoothService.setAnimationSplashCharacteristic(mode, current.durationValue, current.animationIndex)
     }
 
-    fun previewDaySplash() {
-        bluetoothService.previewDaySplash()
+    fun setSplashDuration(duration: Int) {
+        val current = tetrisClockAnimationSplash.value
+        bluetoothService.setAnimationSplashCharacteristic(current.mode, duration, current.animationIndex)
+    }
+
+    fun setSplashAnimation(index: Int) {
+        val current = tetrisClockAnimationSplash.value
+        bluetoothService.setAnimationSplashCharacteristic(current.mode, current.durationValue, index)
+    }
+
+    fun previewSplash() {
+        bluetoothService.previewAnimationSplash()
     }
 
     fun setHourlyBrightnessCharacteristic(hourlyBrightness: TetrisClockHourlyBrightness) {

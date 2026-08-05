@@ -18,13 +18,13 @@ import kotlinx.coroutines.withTimeout
 import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
-import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDaySplash
+import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAnimationSplash
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
-import net.agolyakov.tetrisclockble.service.bluetooth.handlers.DaySplashReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationSplashReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.HourlyBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
@@ -114,11 +114,11 @@ class BluetoothService @Inject constructor(
     )
 
     // Day Splash (animated screensaver played over the 00:00 minute at the day boundary)
-    private var _daySplashState: TetrisClockDaySplash = TetrisClockDaySplash()
-    private val _tetrisClockDaySplash = MutableStateFlow(_daySplashState)
-    val tetrisClockDaySplash: StateFlow<TetrisClockDaySplash> = _tetrisClockDaySplash
-    private val daySplashReadCharacteristicHandler = DaySplashReadCharacteristicHandler(
-        _tetrisClockDaySplash
+    private var _animationSplashState: TetrisClockAnimationSplash = TetrisClockAnimationSplash()
+    private val _tetrisClockAnimationSplash = MutableStateFlow(_animationSplashState)
+    val tetrisClockAnimationSplash: StateFlow<TetrisClockAnimationSplash> = _tetrisClockAnimationSplash
+    private val animationSplashReadCharacteristicHandler = AnimationSplashReadCharacteristicHandler(
+        _tetrisClockAnimationSplash
     )
 
     // Hourly Brightness Schedule (used as the auto brightness source)
@@ -177,7 +177,7 @@ class BluetoothService @Inject constructor(
         manualBrightnessReadCharacteristicHandler,
         autoBrightnessReadCharacteristicHandler,
         colorOrderReadCharacteristicHandler,
-        daySplashReadCharacteristicHandler,
+        animationSplashReadCharacteristicHandler,
         hourlyBrightnessReadCharacteristicHandler,
         turnOnAlarmReadCharacteristicHandler,
         turnOffAlarmReadCharacteristicHandler,
@@ -241,8 +241,8 @@ class BluetoothService @Inject constructor(
         _isRrbbggColorOrder = false
         _tetrisClockIsRrbbggColorOrder.value = _isRrbbggColorOrder
 
-        _daySplashState = TetrisClockDaySplash()
-        _tetrisClockDaySplash.value = _daySplashState
+        _animationSplashState = TetrisClockAnimationSplash()
+        _tetrisClockAnimationSplash.value = _animationSplashState
 
         _turnOnAlarm = TetrisClockAlarm()
         _tetrisClockTurnOnAlarm.value = _turnOnAlarm
@@ -333,7 +333,7 @@ class BluetoothService @Inject constructor(
         bleManager.getManualBrightnessCharacteristic()
         bleManager.getAutoBrightnessCharacteristic()
         bleManager.getColorOrderCharacteristic()
-        bleManager.getDaySplashCharacteristic()
+        bleManager.getAnimationSplashCharacteristic()
         bleManager.getHourlyBrightnessCharacteristic()
         bleManager.getTurnOnAlarmCharacteristic()
         bleManager.getTurnOffAlarmCharacteristic()
@@ -404,21 +404,23 @@ class BluetoothService @Inject constructor(
         }
     }
 
-    fun setDaySplashCharacteristic(enabled: Boolean, animationIndex: Int) {
-        _daySplashState = TetrisClockDaySplash(enabled, animationIndex)
-        _tetrisClockDaySplash.value = _daySplashState
+    fun setAnimationSplashCharacteristic(mode: Int, duration: Int, animationIndex: Int) {
+        _animationSplashState = TetrisClockAnimationSplash(mode, duration, animationIndex)
+        _tetrisClockAnimationSplash.value = _animationSplashState
 
         if (bleManager.isReady) {
-            bleManager.setDaySplashCharacteristic(enabled, animationIndex, previewNow = false)
+            bleManager.setAnimationSplashCharacteristic(mode, duration, animationIndex, previewNow = false)
         }
     }
 
     // Fires a one-off preview of the currently selected animation right now, without changing the
-    // stored enabled/index (the device plays it for ~5s regardless of the time of day).
-    fun previewDaySplash() {
-        val current = _tetrisClockDaySplash.value
+    // stored config (the device plays it for the configured duration, regardless of time and mode).
+    fun previewAnimationSplash() {
+        val current = _tetrisClockAnimationSplash.value
         if (bleManager.isReady) {
-            bleManager.setDaySplashCharacteristic(current.enabled, current.animationIndex, previewNow = true)
+            bleManager.setAnimationSplashCharacteristic(
+                current.mode, current.durationValue, current.animationIndex, previewNow = true
+            )
         }
     }
 
