@@ -1,5 +1,6 @@
 package net.agolyakov.tetrisclockble.data.model.ble
 
+import androidx.annotation.RawRes
 import androidx.annotation.StringRes
 import net.agolyakov.tetrisclockble.R
 
@@ -47,10 +48,12 @@ enum class SplashDuration(val value: Int, val seconds: Int) {
  *
  * @param index the animation index sent to the device (0..7).
  * @param nameRes string resource for the human-readable label shown in the picker (localized).
+ * @param gifRes raw resource of the animation's GIF, shown as a live preview tile in the picker.
  */
 data class SplashAnimation(
     val index: Int,
-    @StringRes val nameRes: Int
+    @StringRes val nameRes: Int,
+    @RawRes val gifRes: Int
 )
 
 /**
@@ -60,7 +63,9 @@ data class SplashAnimation(
  */
 object SplashAnimations {
     val all: List<SplashAnimation> = listOf(
-        SplashAnimation(0, R.string.mc_anim_nyan_cat),
-        SplashAnimation(1, R.string.mc_anim_russian_flag)
+        SplashAnimation(0, R.string.mc_anim_russian_flag, R.raw.splash_russian_flag),
+        SplashAnimation(1, R.string.mc_anim_nyan_cat, R.raw.splash_nyan_cat),
+        SplashAnimation(2, R.string.mc_anim_pacman, R.raw.splash_pacman),
+        SplashAnimation(3, R.string.mc_anim_rick_and_morty, R.raw.splash_rick_and_morty)
     )
 }

@@ -1,3 +1,9 @@
+# Release 1.9.0
+
+- [x] The animation picker in the Splash card is now a gallery of live GIF previews — the selected animation plays while the rest show their first frame — so you can see each one before choosing. Added two more animations (Pac-Man, Rick & Morty), reordered the set to Russian flag / Nyan Cat / Pac-Man / Rick & Morty and localized all names. Also refreshed the card text (per-frequency wording, dropped the now-inaccurate "for a minute" / ":00") and changed the card icon to a film reel
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.8.2...v1.9.0
+
 # Release 1.8.2
 
 - [x] Much faster and more reliable firmware OTA updates: fixed the ATT MTU being pinned at the 23-byte fallback, which made every transfer send tiny 20-byte chunks (~30 minutes, often dropping out partway with "Failed to send OTA data packet"). Chunks are now the full 512 bytes (~18-25x faster), the app requests a high-priority connection for the transfer, and a dropped chunk is retried a few times instead of aborting the whole update. (Same app as 1.8.1, re-released for store delivery.)

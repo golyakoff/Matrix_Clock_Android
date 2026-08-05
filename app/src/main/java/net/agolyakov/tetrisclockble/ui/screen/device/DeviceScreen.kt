@@ -23,15 +23,28 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.platform.LocalContext
+import android.os.Build
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PermDeviceInformation
-import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
@@ -62,12 +75,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -1164,7 +1177,7 @@ fun SplashCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             CardTitle(
-                imageVector = Icons.Default.Pets,
+                imageVector = Icons.Default.Movie,
                 text = stringResource(R.string.mc_splash_title),
                 showSwitch = true,
                 isOn = enabled,
@@ -1197,7 +1210,7 @@ fun SplashCard(
 
                 Spacer(Modifier.height(16.dp))
 
-                SplashAnimationPicker(
+                SplashAnimationGallery(
                     animations = animations,
                     selectedIndex = selectedIndex,
                     onAnimationSelected = onAnimationSelected
@@ -1339,16 +1352,32 @@ fun SplashFrequencyPicker(
     }
 }
 
+// A gallery of animated GIF tiles, one per animation, all playing at once so you can see what you
+// are choosing before you pick it. Tapping a tile selects that animation; the selected one is
+// framed. Replaces the old plain-text dropdown.
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SplashAnimationPicker(
+fun SplashAnimationGallery(
     animations: List<SplashAnimation>,
     selectedIndex: Int,
     onAnimationSelected: (Int) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedAnimation = animations.firstOrNull { it.index == selectedIndex }
-        ?: animations.firstOrNull()
-    val selectedName = selectedAnimation?.let { stringResource(it.nameRes) } ?: ""
+    val context = LocalContext.current
+    // Two loaders: the one WITH a GIF decoder animates (used only for the selected tile), the plain
+    // one has no GIF decoder so Coil decodes just the first frame (used for the non-selected tiles).
+    // ImageDecoderDecoder needs API 28, which the app's minSdk guarantees; GifDecoder is a fallback.
+    val gifImageLoader = remember {
+        ImageLoader.Builder(context)
+            .components {
+                if (Build.VERSION.SDK_INT >= 28) {
+                    add(ImageDecoderDecoder.Factory())
+                } else {
+                    add(GifDecoder.Factory())
+                }
+            }
+            .build()
+    }
+    val staticImageLoader = remember { ImageLoader.Builder(context).build() }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -1357,36 +1386,59 @@ fun SplashAnimationPicker(
             color = MaterialTheme.colorScheme.outline
         )
 
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(8.dp))
 
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { expanded = true },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = selectedName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = null
-                )
-            }
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            animations.forEach { animation ->
+                val selected = animation.index == selectedIndex
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .width(140.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(
+                            width = if (selected) 3.dp else 1.dp,
+                            color = if (selected) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { onAnimationSelected(animation.index) }
+                        .padding(6.dp)
+                ) {
+                    // key(selected) recreates the AsyncImage when selection flips, forcing a fresh
+                    // load with the right loader. Without it, changing only imageLoader doesn't
+                    // reload (Coil keys on the model), so the old tile kept animating and the newly
+                    // selected one stayed on its static frame.
+                    key(selected) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(animation.gifRes)
+                                .build(),
+                            // Selected tile animates; the rest show only their first frame.
+                            imageLoader = if (selected) gifImageLoader else staticImageLoader,
+                            contentDescription = stringResource(animation.nameRes),
+                            // Nearest-neighbour scaling keeps the 64x32 pixel art crisp when enlarged.
+                            filterQuality = FilterQuality.None,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(2f) // the panel is 64x32
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.Black)
+                        )
+                    }
 
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                animations.forEach { animation ->
-                    DropdownMenuItem(
-                        text = { Text(stringResource(animation.nameRes)) },
-                        onClick = {
-                            expanded = false
-                            onAnimationSelected(animation.index)
-                        }
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = stringResource(animation.nameRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
                     )
                 }
             }

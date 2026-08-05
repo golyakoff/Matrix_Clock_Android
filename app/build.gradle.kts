@@ -18,8 +18,8 @@ android {
         applicationId = "net.agolyakov.tetrisclockble"
         minSdk = 28     // Android 9
         targetSdk = 36  // Android 16
-        versionCode = 25
-        versionName = "1.8.2"
+        versionCode = 26
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -86,6 +86,10 @@ dependencies {
     implementation(libs.androidx.appcompat)
     kapt(libs.hilt.compiler)
     implementation(libs.nordic.ble)
+
+    // Coil for rendering animated GIF previews of the splash animations
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
