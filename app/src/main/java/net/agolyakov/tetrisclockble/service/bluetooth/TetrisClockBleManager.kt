@@ -12,6 +12,7 @@ import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.DaySplashReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.HourlyBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
@@ -32,6 +33,7 @@ class TetrisClockBleManager(
     val manualBrightnessReadCharacteristicHandler: ManualBrightnessReadCharacteristicHandler,
     val autoBrightnessReadCharacteristicHandler: AutoBrightnessReadCharacteristicHandler,
     val colorOrderReadCharacteristicHandler: PixelColorOrderReadCharacteristicHandler,
+    val daySplashReadCharacteristicHandler: DaySplashReadCharacteristicHandler,
     val hourlyBrightnessReadCharacteristicHandler: HourlyBrightnessReadCharacteristicHandler,
     var turnOnAlarmReadCharacteristicHandler: TurnOnAlarmReadCharacteristicHandler,
     val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
@@ -47,6 +49,7 @@ class TetrisClockBleManager(
     private var mcManualBrightValueCharacteristic: BluetoothGattCharacteristic? = null
     private var mcAutoBrightnessCharacteristic: BluetoothGattCharacteristic? = null
     private var mcColorOrderCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcDaySplashCharacteristic: BluetoothGattCharacteristic? = null
     private var mcHourlyBrightnessCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOnAlarmCharacteristic: BluetoothGattCharacteristic? = null
     private var mcTurnOffAlarmCharacteristic: BluetoothGattCharacteristic? = null
@@ -63,6 +66,7 @@ class TetrisClockBleManager(
             mcManualBrightValueCharacteristic = service.getCharacteristic(MC_MANUAL_BRIGHT_VAL_CHAR_UUID)
             mcAutoBrightnessCharacteristic = service.getCharacteristic(MC_AUTO_BRIGHT_ENABLE_CHAR_UUID)
             mcColorOrderCharacteristic = service.getCharacteristic(MC_COLOR_ORDER_CHAR_UUID)
+            mcDaySplashCharacteristic = service.getCharacteristic(MC_DAY_SPLASH_CHAR_UUID)
             mcHourlyBrightnessCharacteristic = service.getCharacteristic(MC_HOURLY_BRIGHTNESS_CHAR_UUID)
             mcTurnOnAlarmCharacteristic = service.getCharacteristic(MC_TURN_ON_ALARM_CHAR_UUID)
             mcTurnOffAlarmCharacteristic = service.getCharacteristic(MC_TURN_OFF_ALARM_CHAR_UUID)
@@ -96,6 +100,7 @@ class TetrisClockBleManager(
         mcManualBrightValueCharacteristic = null
         mcAutoBrightnessCharacteristic = null
         mcColorOrderCharacteristic = null
+        mcDaySplashCharacteristic = null
         mcHourlyBrightnessCharacteristic = null
         mcTurnOnAlarmCharacteristic = null
         mcTurnOffAlarmCharacteristic = null
@@ -242,6 +247,19 @@ class TetrisClockBleManager(
         }
     }
 
+    fun getDaySplashCharacteristic() {
+        daySplashReadCharacteristicHandler.let {
+            readCharacteristic(mcDaySplashCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
+    }
+
     fun getHourlyBrightnessCharacteristic() {
         hourlyBrightnessReadCharacteristicHandler.let {
             readCharacteristic(mcHourlyBrightnessCharacteristic)
@@ -360,6 +378,19 @@ class TetrisClockBleManager(
         ).enqueue()
     }
 
+    fun setDaySplashCharacteristic(enabled: Boolean, animationIndex: Int, previewNow: Boolean) {
+        var value = 0
+        if (enabled) value = value or DAY_SPLASH_ENABLED_MASK
+        if (previewNow) value = value or DAY_SPLASH_PREVIEW_MASK
+        value = value or ((animationIndex shl DAY_SPLASH_INDEX_SHIFT) and DAY_SPLASH_INDEX_MASK)
+
+        writeCharacteristic(
+            mcDaySplashCharacteristic,
+            byteArrayOf(value.toByte()),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        ).enqueue()
+    }
+
     fun setHourlyBrightnessCharacteristic(hourlyBrightness: TetrisClockHourlyBrightness) {
         writeCharacteristic(
             mcHourlyBrightnessCharacteristic,
@@ -447,6 +478,16 @@ class TetrisClockBleManager(
         // 0 = RRGGBB (default), 1 = RRBBGG (green/blue swapped, red unchanged)
         // Mode: Read, Write
         val MC_COLOR_ORDER_CHAR_UUID: UUID = UUID.fromString("36B8588D-6F99-4BDC-8B6F-13089F234978")
+
+        // Day Splash control point: an animated screensaver played over the 00:00 minute at the
+        // day boundary. Single byte: bit0 = enabled, bits4..6 = animation index (0..7),
+        // bit3 = "play now" preview command (fires an immediate one-off preview, independent of time).
+        // Mode: Read, Write
+        val MC_DAY_SPLASH_CHAR_UUID: UUID = UUID.fromString("A3F1C2D4-5B6E-47A8-9C0D-1E2F3A4B5C6D")
+        const val DAY_SPLASH_ENABLED_MASK = 0x01
+        const val DAY_SPLASH_PREVIEW_MASK = 0x08
+        const val DAY_SPLASH_INDEX_MASK = 0x70
+        const val DAY_SPLASH_INDEX_SHIFT = 4
 
         // Hourly brightness schedule: 24 brightness nibbles (0..15), one per hour of day
         // (index 0 = 00h..00:59, ... index 23 = 23h..23:59).

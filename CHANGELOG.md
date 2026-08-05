@@ -1,3 +1,9 @@
+# Release 1.7.0
+
+- [x] Added a "Day splash" card (between Scenarios and System) for clock firmware v1.4.0's new easter egg: an animated screensaver the clock plays over the 00:00 minute at the day boundary instead of the usual Tetris digits. Toggle it on/off, pick the animation from a dropdown (Nyan Cat for now), and preview the selected one on the device right away with the "Preview splash" button
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.6.0...v1.7.0
+
 # Release 1.6.0
 
 - [x] The Home screen now shows a hint when no clocks are nearby ("No Tetris Clocks found nearby. Make sure the device is powered on and within 10 meters.") in the device-list area instead of a blank screen

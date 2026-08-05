@@ -44,6 +44,10 @@
     <string name="mc_pixel_color_order">Порядок цветов пикселя</string>
     <string name="mc_pixel_color_order_rrggbb">Красный Зелёный Синий</string>
     <string name="mc_pixel_color_order_rrbbgg">Красный Синий Зелёный</string>
+    <string name="mc_day_splash_title">Заставка суток</string>
+    <string name="mc_day_splash_hint">В полночь вместо часов на минуту проигрывается анимация-пасхалка</string>
+    <string name="mc_day_splash_animation_label">Анимация</string>
+    <string name="mc_day_splash_preview">Посмотреть заставку</string>
     <string name="mc_clock_firmware_version">Версия прошивки часов: %1$s</string>
     <string name="mc_configure">Настроить</string>
     <string name="mc_language_label">Язык:</string>

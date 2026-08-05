@@ -18,11 +18,13 @@ import kotlinx.coroutines.withTimeout
 import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
+import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDaySplash
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.DaySplashReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.HourlyBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.ManualBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.OnOffReadCharacteristicHandler
@@ -111,6 +113,14 @@ class BluetoothService @Inject constructor(
         _tetrisClockIsRrbbggColorOrder
     )
 
+    // Day Splash (animated screensaver played over the 00:00 minute at the day boundary)
+    private var _daySplashState: TetrisClockDaySplash = TetrisClockDaySplash()
+    private val _tetrisClockDaySplash = MutableStateFlow(_daySplashState)
+    val tetrisClockDaySplash: StateFlow<TetrisClockDaySplash> = _tetrisClockDaySplash
+    private val daySplashReadCharacteristicHandler = DaySplashReadCharacteristicHandler(
+        _tetrisClockDaySplash
+    )
+
     // Hourly Brightness Schedule (used as the auto brightness source)
     private var _hourlyBrightnessState: TetrisClockHourlyBrightness = TetrisClockHourlyBrightness()
     private val _tetrisClockHourlyBrightness = MutableStateFlow(_hourlyBrightnessState)
@@ -167,6 +177,7 @@ class BluetoothService @Inject constructor(
         manualBrightnessReadCharacteristicHandler,
         autoBrightnessReadCharacteristicHandler,
         colorOrderReadCharacteristicHandler,
+        daySplashReadCharacteristicHandler,
         hourlyBrightnessReadCharacteristicHandler,
         turnOnAlarmReadCharacteristicHandler,
         turnOffAlarmReadCharacteristicHandler,
@@ -229,6 +240,9 @@ class BluetoothService @Inject constructor(
 
         _isRrbbggColorOrder = false
         _tetrisClockIsRrbbggColorOrder.value = _isRrbbggColorOrder
+
+        _daySplashState = TetrisClockDaySplash()
+        _tetrisClockDaySplash.value = _daySplashState
 
         _turnOnAlarm = TetrisClockAlarm()
         _tetrisClockTurnOnAlarm.value = _turnOnAlarm
@@ -319,6 +333,7 @@ class BluetoothService @Inject constructor(
         bleManager.getManualBrightnessCharacteristic()
         bleManager.getAutoBrightnessCharacteristic()
         bleManager.getColorOrderCharacteristic()
+        bleManager.getDaySplashCharacteristic()
         bleManager.getHourlyBrightnessCharacteristic()
         bleManager.getTurnOnAlarmCharacteristic()
         bleManager.getTurnOffAlarmCharacteristic()
@@ -386,6 +401,24 @@ class BluetoothService @Inject constructor(
 
         if (bleManager.isReady) {
             bleManager.setColorOrderCharacteristic(useRrbbgg)
+        }
+    }
+
+    fun setDaySplashCharacteristic(enabled: Boolean, animationIndex: Int) {
+        _daySplashState = TetrisClockDaySplash(enabled, animationIndex)
+        _tetrisClockDaySplash.value = _daySplashState
+
+        if (bleManager.isReady) {
+            bleManager.setDaySplashCharacteristic(enabled, animationIndex, previewNow = false)
+        }
+    }
+
+    // Fires a one-off preview of the currently selected animation right now, without changing the
+    // stored enabled/index (the device plays it for ~5s regardless of the time of day).
+    fun previewDaySplash() {
+        val current = _tetrisClockDaySplash.value
+        if (bleManager.isReady) {
+            bleManager.setDaySplashCharacteristic(current.enabled, current.animationIndex, previewNow = true)
         }
     }
 

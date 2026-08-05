@@ -29,7 +29,10 @@ import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.PermDeviceInformation
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SwapCalls
@@ -41,9 +44,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
@@ -76,6 +82,8 @@ import androidx.navigation.NavHostController
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.navigation.Screen
+import net.agolyakov.tetrisclockble.data.model.ble.DaySplashAnimation
+import net.agolyakov.tetrisclockble.data.model.ble.DaySplashAnimations
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
@@ -97,6 +105,7 @@ fun DeviceScreen(
     val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
     val isAutoBrightness: Boolean by viewModel.tetrisClockIsAutoBrightness.collectAsState()
     val isRrbbggColorOrder: Boolean by viewModel.tetrisClockIsRrbbggColorOrder.collectAsState()
+    val daySplash by viewModel.tetrisClockDaySplash.collectAsState()
     val hourlyBrightness: TetrisClockHourlyBrightness by viewModel.tetrisClockHourlyBrightness.collectAsState()
     val bleTime: TetrisClockTime by viewModel.tetrisClockBleDeviceTime.collectAsState()
     var phoneTime: TetrisClockTime by remember { mutableStateOf(TetrisClockTime.now()) }
@@ -164,6 +173,16 @@ fun DeviceScreen(
         onColorOrderSelected = { useRrbbgg ->
             viewModel.setColorOrderCharacteristic(useRrbbgg)
         },
+        daySplashEnabled = daySplash.enabled,
+        onDaySplashEnabledChange = { enabled ->
+            viewModel.setDaySplashEnabled(enabled)
+        },
+        daySplashAnimations = viewModel.daySplashAnimations,
+        daySplashSelectedIndex = daySplash.animationIndex,
+        onDaySplashAnimationSelected = { index ->
+            viewModel.setDaySplashAnimation(index)
+        },
+        onDaySplashPreview = { viewModel.previewDaySplash() },
         turnOnAlarm = turnOnAlarm,
         turnOnAlarmOnTimeClick = {
             viewModel.showTimePickerDialog(TetrisClockAlarmType.TURN_ON, turnOnAlarm)
@@ -205,6 +224,12 @@ fun DeviceSettings(
     rtcTemperature: Float,
     isRrbbggColorOrder: Boolean,
     onColorOrderSelected: (Boolean) -> Unit,
+    daySplashEnabled: Boolean,
+    onDaySplashEnabledChange: (Boolean) -> Unit,
+    daySplashAnimations: List<DaySplashAnimation>,
+    daySplashSelectedIndex: Int,
+    onDaySplashAnimationSelected: (Int) -> Unit,
+    onDaySplashPreview: () -> Unit,
     turnOnAlarm: TetrisClockAlarm,
     turnOnAlarmOnTimeClick: () -> Unit,
     turnOnAlarmOnActiveToggle: () -> Unit,
@@ -263,6 +288,16 @@ fun DeviceSettings(
             turnOffAlarm,
             turnOffAlarmOnTimeClick,
             turnOffAlarmOnActiveToggle
+        )
+
+        DaySplashCard(
+            modifier = Modifier,
+            enabled = daySplashEnabled,
+            onEnabledChange = onDaySplashEnabledChange,
+            animations = daySplashAnimations,
+            selectedIndex = daySplashSelectedIndex,
+            onAnimationSelected = onDaySplashAnimationSelected,
+            onPreview = onDaySplashPreview
         )
 
         SystemInfoCard(
@@ -1081,6 +1116,122 @@ fun PixelColorOrderSelector(
 }
 
 @Composable
+fun DaySplashCard(
+    modifier: Modifier,
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit,
+    animations: List<DaySplashAnimation>,
+    selectedIndex: Int,
+    onAnimationSelected: (Int) -> Unit,
+    onPreview: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            CardTitle(
+                imageVector = Icons.Default.Pets,
+                text = stringResource(R.string.mc_day_splash_title),
+                showSwitch = true,
+                isOn = enabled,
+                onCheckedChange = onEnabledChange
+            )
+
+            Text(
+                modifier = Modifier.fillMaxWidth(),
+                text = stringResource(R.string.mc_day_splash_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.outline
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            DaySplashAnimationPicker(
+                animations = animations,
+                selectedIndex = selectedIndex,
+                onAnimationSelected = onAnimationSelected
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            CardButtonWide(
+                imageVector = Icons.Default.PlayArrow,
+                text = stringResource(R.string.mc_day_splash_preview),
+                onClickAction = onPreview,
+                isPrimary = false
+            )
+        }
+    }
+}
+
+@Composable
+fun DaySplashAnimationPicker(
+    animations: List<DaySplashAnimation>,
+    selectedIndex: Int,
+    onAnimationSelected: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = animations.firstOrNull { it.index == selectedIndex }?.name
+        ?: animations.firstOrNull()?.name
+        ?: ""
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.mc_day_splash_animation_label),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = selectedName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                animations.forEach { animation ->
+                    DropdownMenuItem(
+                        text = { Text(animation.name) },
+                        onClick = {
+                            expanded = false
+                            onAnimationSelected(animation.index)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun CardTitle(
     imageVector: ImageVector,
     text: String,
@@ -1204,6 +1355,12 @@ fun DeviceSettings_State1_Preview(){
             rtcTemperature = 21.25F,
             isRrbbggColorOrder = false,
             onColorOrderSelected = {},
+            daySplashEnabled = true,
+            onDaySplashEnabledChange = {},
+            daySplashAnimations = DaySplashAnimations.all,
+            daySplashSelectedIndex = 0,
+            onDaySplashAnimationSelected = {},
+            onDaySplashPreview = {},
             turnOnAlarm = TetrisClockAlarm(
                 isActive = true,
                 hours = 6,
@@ -1255,6 +1412,12 @@ fun DeviceSettings_State2_Preview(){
             rtcTemperature = -10.25F,
             isRrbbggColorOrder = true,
             onColorOrderSelected = {},
+            daySplashEnabled = false,
+            onDaySplashEnabledChange = {},
+            daySplashAnimations = DaySplashAnimations.all,
+            daySplashSelectedIndex = 0,
+            onDaySplashAnimationSelected = {},
+            onDaySplashPreview = {},
             turnOnAlarm = TetrisClockAlarm(
                 isActive = false,
                 hours = 6,

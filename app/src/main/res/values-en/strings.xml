@@ -44,6 +44,10 @@
     <string name="mc_pixel_color_order">Pixel color order</string>
     <string name="mc_pixel_color_order_rrggbb">Red Green Blue</string>
     <string name="mc_pixel_color_order_rrbbgg">Red Blue Green</string>
+    <string name="mc_day_splash_title">Day splash</string>
+    <string name="mc_day_splash_hint">At midnight an animation easter egg plays for a minute instead of the clock</string>
+    <string name="mc_day_splash_animation_label">Animation</string>
+    <string name="mc_day_splash_preview">Preview splash</string>
     <string name="mc_clock_firmware_version">Clock firmware version: %1$s</string>
     <string name="mc_configure">Configure</string>
     <string name="mc_language_label">Language:</string>
