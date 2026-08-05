@@ -1,3 +1,9 @@
+# Release 1.8.2
+
+- [x] Much faster and more reliable firmware OTA updates: fixed the ATT MTU being pinned at the 23-byte fallback, which made every transfer send tiny 20-byte chunks (~30 minutes, often dropping out partway with "Failed to send OTA data packet"). Chunks are now the full 512 bytes (~18-25x faster), the app requests a high-priority connection for the transfer, and a dropped chunk is retried a few times instead of aborting the whole update. (Same app as 1.8.1, re-released for store delivery.)
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.8.1...v1.8.2
+
 # Release 1.8.1
 
 - [x] Fixed firmware OTA updates being extremely slow (~0.1% every 10 seconds, ~30 minutes total) and often failing partway with "Failed to send OTA data packet". The negotiated ATT MTU was being pinned at the 23-byte fallback: the MTU exchange runs twice per connection (a GATT cache refresh re-runs it), the first attempt fails on the still-settling connection and completed a one-shot deferred with 23, so the later successful 515-byte exchange was ignored and every chunk was sent as 20 bytes. The app now keeps the best MTU seen instead of pinning the first (failed) result, so chunks are the full 512 bytes (~18-25x faster). Also requests a high-priority (short-interval) connection for the duration of the transfer and retries a failed chunk a few times before aborting, so a single dropped write on a weak link no longer kills the whole update
