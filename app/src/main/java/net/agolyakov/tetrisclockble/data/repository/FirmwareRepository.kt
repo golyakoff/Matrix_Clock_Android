@@ -1,6 +1,7 @@
 package net.agolyakov.tetrisclockble.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.yourcompany.yourapp.utils.HashUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -244,6 +245,11 @@ class FirmwareRepository @Inject constructor(
         var inputStream: FileInputStream? = null
         try {
             bluetoothService.enterOtaUpdateMode();
+            // Ask for the fastest connection interval for the whole transfer: with write-with-
+            // response, throughput is one chunk per interval, so this is the single biggest speed
+            // lever and also cuts the write timeouts that abort the transfer on flaky links.
+            bluetoothService.requestHighConnectionPriority()
+
             val startCommand = createStartCommand(firmwareFile.length())
             val startSuccess = bluetoothService.setOtaControlCharacteristic(startCommand)
             if (!startSuccess) throw IOException("Failed to start OTA process")
@@ -255,6 +261,9 @@ class FirmwareRepository @Inject constructor(
             // the write response, which naturally throttles this loop.
             val mtu = bluetoothService.getNegotiatedMtu()
             val chunkSize = (mtu - 3).coerceIn(20, 512)
+            // A negotiated MTU near 23 (chunkSize ~20) means the peer capped it: the transfer then
+            // needs ~25x more round-trips and crawls. Logged so a slow update can be diagnosed.
+            Log.i(TAG, "OTA transfer: negotiated MTU=$mtu, chunkSize=$chunkSize, size=${firmwareFile.length()} bytes")
 
             inputStream = FileInputStream(firmwareFile)
             val buffer = ByteArray(chunkSize)
@@ -262,10 +271,25 @@ class FirmwareRepository @Inject constructor(
             var bytesRead: Int
 
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                val dataSuccess = bluetoothService.setOtaDataCharacteristic(
-                    buffer.copyOf(bytesRead)
-                )
-                if (!dataSuccess) throw IOException("Failed to send OTA data packet")
+                val chunk = buffer.copyOf(bytesRead)
+
+                // Retry a failed chunk a few times before giving up, so a single dropped write on a
+                // weak link no longer aborts the whole update (the "failed at N%" symptom). A write
+                // reports failure when its ATT response didn't arrive, so the peer almost always
+                // didn't get the chunk - resending is safe; in the rare case the response alone was
+                // lost, the final size check catches the resulting mismatch.
+                var attempt = 0
+                var dataSuccess = false
+                while (attempt < OTA_CHUNK_MAX_ATTEMPTS) {
+                    dataSuccess = bluetoothService.setOtaDataCharacteristic(chunk)
+                    if (dataSuccess) break
+                    attempt++
+                    Log.w(TAG, "OTA chunk write failed at ${totalBytesSent} bytes, retry $attempt/$OTA_CHUNK_MAX_ATTEMPTS")
+                    delay(OTA_CHUNK_RETRY_DELAY_MS * attempt)
+                }
+                if (!dataSuccess) {
+                    throw IOException("Failed to send OTA data packet after $OTA_CHUNK_MAX_ATTEMPTS attempts")
+                }
 
                 totalBytesSent += bytesRead
                 val progress = (totalBytesSent.toFloat() / firmwareFile.length()) * 100f
@@ -282,6 +306,7 @@ class FirmwareRepository @Inject constructor(
             throw IOException("Firmware installation failed: ${e.message}", e)
         } finally {
             inputStream?.close()
+            bluetoothService.requestBalancedConnectionPriority()
             bluetoothService.exitOtaUpdateMode();
         }
     }
@@ -298,5 +323,14 @@ class FirmwareRepository @Inject constructor(
 
     private fun isNewVersionAvailable(current: String, latest: String): Boolean {
         return latest != current
+    }
+
+    companion object {
+        private const val TAG = "FirmwareRepository"
+
+        // Per-chunk send retry: how many times to resend a chunk whose BLE write failed before
+        // aborting the whole update, and the base backoff between attempts (grows per attempt).
+        private const val OTA_CHUNK_MAX_ATTEMPTS = 5
+        private const val OTA_CHUNK_RETRY_DELAY_MS = 20L
     }
 }

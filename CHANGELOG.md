@@ -1,3 +1,9 @@
+# Release 1.8.1
+
+- [x] Fixed firmware OTA updates being extremely slow (~0.1% every 10 seconds, ~30 minutes total) and often failing partway with "Failed to send OTA data packet". The negotiated ATT MTU was being pinned at the 23-byte fallback: the MTU exchange runs twice per connection (a GATT cache refresh re-runs it), the first attempt fails on the still-settling connection and completed a one-shot deferred with 23, so the later successful 515-byte exchange was ignored and every chunk was sent as 20 bytes. The app now keeps the best MTU seen instead of pinning the first (failed) result, so chunks are the full 512 bytes (~18-25x faster). Also requests a high-priority (short-interval) connection for the duration of the transfer and retries a failed chunk a few times before aborting, so a single dropped write on a weak link no longer kills the whole update
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.8.0...v1.8.1
+
 # Release 1.8.0
 
 - [x] Reworked the "Day splash" card into a "Splash" card matching clock firmware v1.5.0: turning it on now reveals a frequency picker (once a day / every 3 hours / every hour), a duration picker (10 / 20 / 40 / 60 seconds) and the animation picker, with a description under the title that updates to match the selected frequency. "Preview splash" plays the selected animation on the device for the chosen duration

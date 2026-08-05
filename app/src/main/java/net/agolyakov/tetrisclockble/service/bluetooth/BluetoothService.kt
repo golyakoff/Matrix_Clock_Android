@@ -533,4 +533,9 @@ class BluetoothService @Inject constructor(
     }
 
     suspend fun getNegotiatedMtu(): Int = bleManager.awaitNegotiatedMtu()
+
+    // Bracket an OTA transfer with these: HIGH shortens the connection interval (faster, fewer
+    // write timeouts), BALANCED restores the power-friendly default afterwards.
+    fun requestHighConnectionPriority() = bleManager.requestHighConnectionPriority()
+    fun requestBalancedConnectionPriority() = bleManager.requestBalancedConnectionPriority()
 }

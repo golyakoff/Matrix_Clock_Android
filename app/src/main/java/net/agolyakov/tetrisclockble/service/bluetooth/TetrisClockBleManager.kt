@@ -7,6 +7,7 @@ import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
@@ -42,7 +43,14 @@ class TetrisClockBleManager(
     val versionReadCharacteristicHandler: VersionReadCharacteristicHandler
 ) : BleManager(context) {
     private val _tag = "TetrisClockBleManager"
-    private val _mtuDeferred = CompletableDeferred<Int>()
+    // The MTU exchange can run more than once per connection (initialize() re-runs after the GATT
+    // cache refresh), and the first attempt often fails on the still-settling connection. Track the
+    // best value seen plus a separate readiness signal, so a failed early attempt can't poison a
+    // later successful one - a one-shot CompletableDeferred<Int> completed on the first (failed)
+    // attempt pinned the MTU at 23 forever even after the later exchange succeeded at 515, which is
+    // what made every OTA crawl with 20-byte chunks.
+    @Volatile private var _negotiatedMtu = 23
+    private val _mtuReady = CompletableDeferred<Unit>()
     private var _hasRefreshedGattCache = false
     private var mcTimeCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOnOffCharacteristic: BluetoothGattCharacteristic? = null
@@ -131,16 +139,38 @@ class TetrisClockBleManager(
      * Negotiated ATT MTU (suspends until the MTU exchange completes after connect).
      * OTA chunks must not exceed MTU-3 or Android falls back to slow long writes.
      */
-    suspend fun awaitNegotiatedMtu(): Int = _mtuDeferred.await()
+    suspend fun awaitNegotiatedMtu(): Int {
+        // Wait briefly for the first successful exchange, then return the best MTU seen (falling
+        // back to the 23-byte default only if none ever succeeded). By the time an OTA starts the
+        // exchange has long since completed, so this returns immediately in practice.
+        withTimeoutOrNull(3000) { _mtuReady.await() }
+        return _negotiatedMtu
+    }
+
+    /**
+     * Asks Android for the fastest connection interval (CONNECTION_PRIORITY_HIGH). Used for the
+     * duration of an OTA transfer: with write-with-response, throughput is one chunk per connection
+     * interval, so a shorter interval directly speeds the transfer up and cuts write timeouts.
+     */
+    fun requestHighConnectionPriority() {
+        requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH).enqueue()
+    }
+
+    /** Restores the default (balanced) connection interval after an OTA transfer. */
+    fun requestBalancedConnectionPriority() {
+        requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_BALANCED).enqueue()
+    }
 
     private fun setupMtu() {
         requestMtu(BLE_MTU)
             .with { device, mtu ->
             Log.d(_tag, "MTU set to: $mtu")
-            _mtuDeferred.complete(mtu)
+            _negotiatedMtu = mtu
+            if (!_mtuReady.isCompleted) _mtuReady.complete(Unit)
         }.fail { device, status ->
-            Log.w(_tag, "MTU request failed, using default value 23")
-            _mtuDeferred.complete(23) // Fallback to default
+            // Don't pin a fallback here: initialize() runs setupMtu() again after the GATT cache
+            // refresh, and that later attempt usually succeeds - keep the best value seen so far.
+            Log.w(_tag, "MTU request failed (status=$status), keeping current MTU ${_negotiatedMtu}")
         }.enqueue()
     }
 
