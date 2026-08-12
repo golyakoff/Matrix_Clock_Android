@@ -1,3 +1,9 @@
+# Release 1.9.1
+
+- [x] Firmware OTA updates now fail honestly instead of silently "succeeding" against a rebooted clock. If the clock dropped the connection mid-update (it had rebooted), the app used to keep pushing the rest of the file into a device that ignored it and report progress climbing to ~99% as if it were working. The app now detects the mid-transfer disconnect and stops immediately with a clear message ("The clock disconnected during the update (it likely rebooted). Please try again."). Best paired with clock firmware v1.6.1, which fixes the underlying mid-transfer drop itself
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.9.0...v1.9.1
+
 # Release 1.9.0
 
 - [x] The animation picker in the Splash card is now a gallery of live GIF previews — the selected animation plays while the rest show their first frame — so you can see each one before choosing. Added two more animations (Pac-Man, Rick & Morty), reordered the set to Russian flag / Nyan Cat / Pac-Man / Rick & Morty and localized all names. Also refreshed the card text (per-frequency wording, dropped the now-inaccurate "for a minute" / ":00") and changed the card icon to a film reel

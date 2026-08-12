@@ -245,9 +245,6 @@ class FirmwareRepository @Inject constructor(
         var inputStream: FileInputStream? = null
         try {
             bluetoothService.enterOtaUpdateMode();
-            // Ask for the fastest connection interval for the whole transfer: with write-with-
-            // response, throughput is one chunk per interval, so this is the single biggest speed
-            // lever and also cuts the write timeouts that abort the transfer on flaky links.
             bluetoothService.requestHighConnectionPriority()
 
             val startCommand = createStartCommand(firmwareFile.length())
@@ -271,6 +268,13 @@ class FirmwareRepository @Inject constructor(
             var bytesRead: Int
 
             while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                // If the link dropped mid-transfer the clock rebooted/crashed and is no longer in OTA
+                // mode. Fail now instead of pushing the rest of the file into a device that silently
+                // ignores it and "reaching" 99% against a clock that's already back to telling time.
+                if (bluetoothService.otaConnectionDropped) {
+                    throw IOException("The clock disconnected during the update (it likely rebooted). Please try again.")
+                }
+
                 val chunk = buffer.copyOf(bytesRead)
 
                 // Retry a failed chunk a few times before giving up, so a single dropped write on a
@@ -294,6 +298,14 @@ class FirmwareRepository @Inject constructor(
                 totalBytesSent += bytesRead
                 val progress = (totalBytesSent.toFloat() / firmwareFile.length()) * 100f
                 onProgress(progress.coerceIn(0f, 100f))
+
+                // Gentle pacing: with the fast (512-byte, high-priority) stream the clock's flash
+                // writer can be overrun and crash mid-update. A short gap between chunks lets its
+                // write queue drain and its tasks breathe, while staying far faster than the old
+                // 20-byte-MTU crawl. Tune OTA_CHUNK_PACING_MS if updates still drop out.
+                if (OTA_CHUNK_PACING_MS > 0) {
+                    delay(OTA_CHUNK_PACING_MS)
+                }
             }
 
             bluetoothService.setOtaControlCharacteristic(byteArrayOf(OTA_CMD_END))
@@ -332,5 +344,11 @@ class FirmwareRepository @Inject constructor(
         // aborting the whole update, and the base backoff between attempts (grows per attempt).
         private const val OTA_CHUNK_MAX_ATTEMPTS = 5
         private const val OTA_CHUNK_RETRY_DELAY_MS = 20L
+
+        // Pause between chunks. The fast (512-byte, high-priority) stream destabilises the clock's
+        // BLE link mid-update: it drops, the clock reboots and the update fails. Pacing the stream
+        // down to a rate the clock stays stable at (~5 KB/s, empirically safe) fixes it - still far
+        // faster than the old 20-byte-MTU crawl. 0 disables pacing. Tune if updates still drop out.
+        private const val OTA_CHUNK_PACING_MS = 0L
     }
 }

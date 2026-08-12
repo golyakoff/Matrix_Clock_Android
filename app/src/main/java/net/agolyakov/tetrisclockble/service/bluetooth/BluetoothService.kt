@@ -48,8 +48,17 @@ class BluetoothService @Inject constructor(
 
     private var isOtaUpdateMode = false
 
+    // Set if the link drops while an OTA transfer is in flight. A mid-transfer disconnect means the
+    // device rebooted/crashed and is no longer in OTA mode, so continuing to write would just push
+    // bytes into a device that ignores them (the connection auto-reconnects). FirmwareRepository
+    // polls this to fail the update instead of "succeeding" to 99% against a rebooted clock.
+    @Volatile
+    var otaConnectionDropped = false
+        private set
+
     fun enterOtaUpdateMode() {
         isOtaUpdateMode = true
+        otaConnectionDropped = false
         Log.d("BluetoothService", "Entered OTA update mode - connections will be preserved")
     }
 
@@ -210,6 +219,12 @@ class BluetoothService @Inject constructor(
 
         override fun onDeviceDisconnected(device: BluetoothDevice, reason: Int) {
             _connectionState.value = ConnectionState.Disconnected
+            // A drop during an OTA transfer means the clock rebooted mid-update; remember it so the
+            // transfer fails instead of silently resuming against a device that left OTA mode.
+            if (isOtaUpdateMode) {
+                otaConnectionDropped = true
+                Log.w(_tag, "Link dropped during OTA - the clock likely rebooted mid-update")
+            }
             tryReconnect()
         }
     }
