@@ -73,7 +73,13 @@ class FirmwareRepository @Inject constructor(
     ): UpdateState {
         return withContext(Dispatchers.IO) {
             try {
-                val asset = release.assets.first { it.name.endsWith("_release_4mb_fw.bin") }
+                // Pick the release binary matching the clock's physical flash size (reported over BLE
+                // by firmware v1.7.0+). 0 means the clock didn't report it (older firmware) - fall
+                // back to the 4MB build, which is what every device in the field before this was.
+                val flashSizeMb = bluetoothService.tetrisClockFlashSizeMb.value
+                val suffix = if (flashSizeMb == 16) "_release_16mb_fw.bin" else "_release_4mb_fw.bin"
+                val asset = release.assets.first { it.name.endsWith(suffix) }
+                Log.i(TAG, "Selected firmware asset '${asset.name}' for flash size ${flashSizeMb} MB")
                 val firmwareFile = downloadFirmwareAsset(asset, onProgress)
                 validateFirmware(firmwareFile, asset)
                 UpdateState.ReadyToInstall(firmwareFile, release)

@@ -1,3 +1,10 @@
+# Release 1.9.2
+
+- [x] The System card now shows the clock's physical flash memory size ("Clock flash memory: N MB"), read over BLE from clock firmware v1.7.0+. Firmware updates now download the release binary that matches that flash size (4MB vs 16MB) instead of always using the 4MB build, so 16MB boards get the right image. On older firmware that doesn't report the size the row is hidden and the 4MB build is used, as before
+- [x] The Splash animation picker now shows exactly the animations the connected clock actually ships, read over BLE from firmware v1.7.0+ (so a 16MB build can offer more animations than a 4MB one). On older firmware that doesn't report it, the full bundled catalog is shown, as before
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.9.1...v1.9.2
+
 # Release 1.9.1
 
 - [x] Firmware OTA updates now fail honestly instead of silently "succeeding" against a rebooted clock. If the clock dropped the connection mid-update (it had rebooted), the app used to keep pushing the rest of the file into a device that ignored it and report progress climbing to ~99% as if it were working. The app now detects the mid-transfer disconnect and stops immediately with a clear message ("The clock disconnected during the update (it likely rebooted). Please try again."). Best paired with clock firmware v1.6.1, which fixes the underlying mid-transfer drop itself

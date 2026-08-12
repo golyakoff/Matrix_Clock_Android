@@ -18,8 +18,8 @@ android {
         applicationId = "net.agolyakov.tetrisclockble"
         minSdk = 28     // Android 9
         targetSdk = 36  // Android 16
-        versionCode = 27
-        versionName = "1.9.1"
+        versionCode = 28
+        versionName = "1.9.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -80,6 +80,8 @@ class DeviceViewModel @Inject constructor(
     var tetrisClockTurnOffAlarm = bluetoothService.tetrisClockTurnOffAlarm
     val tetrisClockAgingOffset = bluetoothService.tetrisClockAgingOffset
     val tetrisClockRtcTemperature  =  bluetoothService.tetrisClockRtcTemperature
+    val tetrisClockFlashSizeMb = bluetoothService.tetrisClockFlashSizeMb
+    val tetrisClockAnimationCount = bluetoothService.tetrisClockAnimationCount
 
     private val _manualBrightnessState = MutableStateFlow<Byte>(0)
     private val _debouncedBrightness = MutableSharedFlow<Byte>(extraBufferCapacity = 1)

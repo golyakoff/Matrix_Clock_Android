@@ -34,6 +34,8 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TimeReadCharacter
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOffAlarmReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOnAlarmReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.VersionReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.FlashSizeReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationCountReadCharacteristicHandler
 import no.nordicsemi.android.ble.observer.ConnectionObserver
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -170,6 +172,21 @@ class BluetoothService @Inject constructor(
         _tetrisClockRtcTemperature
     )
 
+    // Physical flash chip size in whole megabytes (0 = unknown / not reported by older firmware).
+    private val _tetrisClockFlashSizeMb = MutableStateFlow(0)
+    val tetrisClockFlashSizeMb: StateFlow<Int> = _tetrisClockFlashSizeMb
+    private val flashSizeReadCharacteristicHandler = FlashSizeReadCharacteristicHandler(
+        _tetrisClockFlashSizeMb
+    )
+
+    // Number of Animation Splash animations this clock's firmware ships (0 = not reported by older
+    // firmware, in which case the app shows its whole bundled catalog).
+    private val _tetrisClockAnimationCount = MutableStateFlow(0)
+    val tetrisClockAnimationCount: StateFlow<Int> = _tetrisClockAnimationCount
+    private val animationCountReadCharacteristicHandler = AnimationCountReadCharacteristicHandler(
+        _tetrisClockAnimationCount
+    )
+
     // Region: BleManager and Bluetooth internals
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -192,7 +209,9 @@ class BluetoothService @Inject constructor(
         turnOffAlarmReadCharacteristicHandler,
         agingOffsetReadCharacteristicHandler,
         rtcTemperatureReadCharacteristicHandler,
-        firmwareVersionReadCharacteristicHandler)
+        firmwareVersionReadCharacteristicHandler,
+        flashSizeReadCharacteristicHandler,
+        animationCountReadCharacteristicHandler)
 
     private val connectionObserver = object : ConnectionObserver {
         override fun onDeviceConnecting(device: BluetoothDevice) {
@@ -270,6 +289,9 @@ class BluetoothService @Inject constructor(
 
         _rtcTemperatureState = Float.NaN
         _tetrisClockRtcTemperature.value = _rtcTemperatureState
+
+        _tetrisClockFlashSizeMb.value = 0
+        _tetrisClockAnimationCount.value = 0
     }
 
     fun connect(tetrisClockDevice: TetrisClockDevice, useAutoConnect: Boolean = false) {
@@ -355,6 +377,8 @@ class BluetoothService @Inject constructor(
         bleManager.getAgingOffsetCharacteristic()
         bleManager.getRtcTemperatureCharacteristic()
         bleManager.getVersionCharacteristic()
+        bleManager.getFlashSizeCharacteristic()
+        bleManager.getAnimationCountCharacteristic()
     }
 
     // Region: BLE GATT characteristic setters

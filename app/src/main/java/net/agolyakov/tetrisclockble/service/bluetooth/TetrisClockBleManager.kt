@@ -23,6 +23,8 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TimeReadCharacter
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOffAlarmReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOnAlarmReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.VersionReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.FlashSizeReadCharacteristicHandler
+import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationCountReadCharacteristicHandler
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import java.util.UUID
@@ -40,7 +42,9 @@ class TetrisClockBleManager(
     val turnOffAlarmReadCharacteristicHandler: TurnOffAlarmReadCharacteristicHandler,
     val agingOffsetReadCharacteristicHandler: AgingOffsetReadCharacteristicHandler,
     val rtcTemperatureReadCharacteristicHandler: RtcTemperatureReadCharacteristicHandler,
-    val versionReadCharacteristicHandler: VersionReadCharacteristicHandler
+    val versionReadCharacteristicHandler: VersionReadCharacteristicHandler,
+    val flashSizeReadCharacteristicHandler: FlashSizeReadCharacteristicHandler,
+    val animationCountReadCharacteristicHandler: AnimationCountReadCharacteristicHandler
 ) : BleManager(context) {
     private val _tag = "TetrisClockBleManager"
     // The MTU exchange can run more than once per connection (initialize() re-runs after the GATT
@@ -64,6 +68,8 @@ class TetrisClockBleManager(
     private var mcAgingOffsetCharacteristic: BluetoothGattCharacteristic? = null
     private var mcRtcTemperatureCharacteristic: BluetoothGattCharacteristic? = null
     private var mcVersionCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcFlashSizeCharacteristic: BluetoothGattCharacteristic? = null
+    private var mcAnimationCountCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOtaControlCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOtaDataCharacteristic: BluetoothGattCharacteristic? = null
 
@@ -81,6 +87,8 @@ class TetrisClockBleManager(
             mcAgingOffsetCharacteristic = service.getCharacteristic(MC_AGING_OFFSET_CHAR_UUID)
             mcRtcTemperatureCharacteristic = service.getCharacteristic(MC_TEMPERATURE_CHAR_UUID)
             mcVersionCharacteristic = service.getCharacteristic(MC_VERSION_CHAR_UUID)
+            mcFlashSizeCharacteristic = service.getCharacteristic(MC_FLASH_SIZE_CHAR_UUID)
+            mcAnimationCountCharacteristic = service.getCharacteristic(MC_ANIMATION_COUNT_CHAR_UUID)
             mcOtaControlCharacteristic = service.getCharacteristic(MC_OTA_CONTROL_CHAR_UUID)
             mcOtaDataCharacteristic = service.getCharacteristic(MC_OTA_DATA_CHAR_UUID)
         }
@@ -115,6 +123,8 @@ class TetrisClockBleManager(
         mcAgingOffsetCharacteristic = null
         mcRtcTemperatureCharacteristic = null
         mcVersionCharacteristic = null
+        mcFlashSizeCharacteristic = null
+        mcAnimationCountCharacteristic = null
         mcOtaControlCharacteristic = null
         mcOtaDataCharacteristic = null
     }
@@ -368,6 +378,36 @@ class TetrisClockBleManager(
         }
     }
 
+    fun getFlashSizeCharacteristic() {
+        // mcFlashSizeCharacteristic is null on older firmware that doesn't expose it; readCharacteristic
+        // on a null target is a no-op, so the flash-size flow just stays at its "unknown" default.
+        flashSizeReadCharacteristicHandler.let {
+            readCharacteristic(mcFlashSizeCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
+    }
+
+    fun getAnimationCountCharacteristic() {
+        // Null on older firmware that doesn't expose it; the read is then a no-op and the flow keeps
+        // its 0 default, so the app falls back to showing its whole bundled animation catalog.
+        animationCountReadCharacteristicHandler.let {
+            readCharacteristic(mcAnimationCountCharacteristic)
+                .with { device: BluetoothDevice?, data: Data? ->
+                    it.onReadCharacteristicCallback(
+                        device!!,
+                        data!!
+                    )
+                }
+                .enqueue()
+        }
+    }
+
     fun setTimeCharacteristic(time: TetrisClockTime) {
         writeCharacteristic(
             mcTimeCharacteristic,
@@ -560,6 +600,14 @@ class TetrisClockBleManager(
         // BLE Device firmware version
         // M Read, Notify
         val MC_VERSION_CHAR_UUID: UUID = UUID.fromString("BEB5483E-36E1-4688-B7F5-EA07361B26A0")
+
+        // BLE Device physical flash chip size in whole megabytes (1 byte, e.g. 4 or 16)
+        // M Read
+        val MC_FLASH_SIZE_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4F5")
+
+        // Number of Animation Splash animations this firmware build ships (1 byte)
+        // M Read
+        val MC_ANIMATION_COUNT_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4F6")
 
         // BLE Device OTA update process control point
         // M Write

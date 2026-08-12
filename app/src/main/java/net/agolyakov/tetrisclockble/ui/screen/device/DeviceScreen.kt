@@ -116,6 +116,15 @@ fun DeviceScreen(
 ) {
     val viewModel: DeviceViewModel = hiltViewModel()
     val firmwareVersion: String by viewModel.tetrisClockFirmwareVersion.collectAsState()
+    val flashSizeMb: Int by viewModel.tetrisClockFlashSizeMb.collectAsState()
+    val animationCount: Int by viewModel.tetrisClockAnimationCount.collectAsState()
+    // Show only the animations the connected clock actually ships (reported over BLE); 0 means older
+    // firmware that doesn't report it, so fall back to the whole bundled catalog. take() caps safely
+    // if the clock ever reports more than the app currently bundles.
+    val visibleSplashAnimations = if (animationCount > 0)
+        viewModel.splashAnimations.take(animationCount)
+    else
+        viewModel.splashAnimations
     val isOn: Boolean by viewModel.tetrisClockTetrisOn.collectAsState()
     val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
     val isAutoBrightness: Boolean by viewModel.tetrisClockIsAutoBrightness.collectAsState()
@@ -160,6 +169,7 @@ fun DeviceScreen(
         deviceFriendlyName = device?.friendlyName ?: device?.deviceName ?: stringResource(R.string.mc_unnamed_device),
         deviceMacAddress = device?.macAddress ?: stringResource(R.string.mc_unknown_address),
         firmwareVersion = firmwareVersion,
+        flashSizeMb = flashSizeMb,
         isOn = isOn,
         onSwitchOnOffCheckedChangeAction = { isChecked ->
             viewModel.toggleOnOffCharacteristic()
@@ -200,7 +210,7 @@ fun DeviceScreen(
         onSplashDurationSelected = { duration ->
             viewModel.setSplashDuration(duration)
         },
-        splashAnimations = viewModel.splashAnimations,
+        splashAnimations = visibleSplashAnimations,
         splashSelectedIndex = animationSplash.animationIndex,
         onSplashAnimationSelected = { index ->
             viewModel.setSplashAnimation(index)
@@ -231,6 +241,7 @@ fun DeviceSettings(
     deviceFriendlyName: String,
     deviceMacAddress: String,
     firmwareVersion: String,
+    flashSizeMb: Int,
     isOn: Boolean,
     onSwitchOnOffCheckedChangeAction: (Boolean) -> Unit,
     manualBrightness: Byte,
@@ -334,6 +345,7 @@ fun DeviceSettings(
         SystemInfoCard(
             modifier = Modifier,
             firmwareVersion,
+            flashSizeMb,
             onFirmwareUpdateButtonClickAction,
             rtcTemperature,
             isRrbbggColorOrder,
@@ -1024,6 +1036,7 @@ fun TimePickerDialog(
 fun SystemInfoCard(
     modifier: Modifier,
     firmwareVersion: String,
+    flashSizeMb: Int,
     onFirmwareUpdateButtonClickAction: () -> Unit,
     rtcTemperature: Float,
     isRrbbggColorOrder: Boolean,
@@ -1075,6 +1088,17 @@ fun SystemInfoCard(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary
             )
+
+            // Physical flash size is only known on firmware v1.7.0+ (0 = not reported); hide the row
+            // on older firmware rather than showing a meaningless "0 MB".
+            if (flashSizeMb > 0) {
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.mc_clock_flash_size, flashSizeMb),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             Spacer(Modifier.width(16.dp))
 
@@ -1549,6 +1573,7 @@ fun DeviceSettings_State1_Preview(){
             deviceFriendlyName = "Часы в детской",
             deviceMacAddress = "1a:2b:3c:4d:5e:6f",
             firmwareVersion = "v1.0.1-rc6",
+            flashSizeMb = 4,
             isOn = true,
             onButtonSyncClickAction = {},
             manualBrightness = 8,
@@ -1610,6 +1635,7 @@ fun DeviceSettings_State2_Preview(){
             deviceFriendlyName = "Tetris Clock",
             deviceMacAddress = "11:22:33:44:55:66",
             firmwareVersion = "v.1.0.0",
+            flashSizeMb = 16,
             isOn = false,
             onButtonSyncClickAction = {},
             manualBrightness = 3,
