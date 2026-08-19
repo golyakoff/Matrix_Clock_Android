@@ -295,8 +295,17 @@ class BluetoothService @Inject constructor(
     }
 
     fun connect(tetrisClockDevice: TetrisClockDevice, useAutoConnect: Boolean = false) {
+        // Ready belongs here just as much as Connected: it is the state of a *fully* established
+        // link (onDeviceReady), which is exactly what we are in when the device screen is entered
+        // again - e.g. coming back from the firmware update screen, whose LaunchedEffect asks to
+        // connect once more. Letting that through breaks the working connection: the BLE library
+        // completes a connect request to an already-connected device straight away, without
+        // emitting any ConnectionObserver callback, so nothing would move the state on from the
+        // Connecting we set below and nothing would re-read the characteristics we just cleared -
+        // the screen stays empty and "connecting" forever over a link that is actually alive.
         if (_connectionState.value is ConnectionState.Connecting ||
-            _connectionState.value is ConnectionState.Connected) {
+            _connectionState.value is ConnectionState.Connected ||
+            _connectionState.value is ConnectionState.Ready) {
             Log.w(_tag, "Already connecting/connected, ignoring new connection request")
             return
         }
@@ -352,8 +361,12 @@ class BluetoothService @Inject constructor(
 
     fun tryReconnect() {
         _lastConnectedDevice?.let {
+            // Error counts as "not connected" too: a connect attempt that failed used to leave the
+            // state there for good, so nothing - not even bringing the app back to the foreground -
+            // ever tried again.
             if (_shouldMaintainConnection.value &&
-                _connectionState.value is ConnectionState.Disconnected)
+                (_connectionState.value is ConnectionState.Disconnected ||
+                 _connectionState.value is ConnectionState.Error))
             {
                 Log.i(_tag, "Reconnecting to last device: ${it.deviceName}")
                 // Auto-connect: the device may be unreachable right now (e.g. rebooting), so let

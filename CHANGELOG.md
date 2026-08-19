@@ -1,3 +1,10 @@
+# Release 1.10.1
+
+- [x] Fixed the connection appearing to hang after leaving the firmware update screen and coming back: the clock's settings stayed empty and the app sat on "connecting" over a link that was in fact still alive, until the app was restarted. Returning to the device screen asked to connect once more, and a connect request aimed at an already-connected device completes silently inside the BLE library — no connection callback follows it, so nothing re-read the settings the request had just cleared. The app now recognises a fully established connection and leaves it alone. Anything else that reopens the device screen while connected was affected in the same way
+- [x] A connection attempt that fails no longer stays failed forever: the app retries it again on the next reconnect (for example when it is brought back to the foreground), instead of only retrying after a clean disconnect
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.10.0...v1.10.1
+
 # Release 1.10.0
 
 - [x] Six new Splash animations to pick from, matching clock firmware v1.8.0: Minions, BMO, Finn, Mochi cat, Color bars and Audio tape. The picker still shows exactly what the connected clock ships, so they appear once the clock is updated to v1.8.0; on firmware older than v1.7.0 (which doesn't report the count) the app now shows the four animations that firmware actually had, instead of the whole bundled catalog
