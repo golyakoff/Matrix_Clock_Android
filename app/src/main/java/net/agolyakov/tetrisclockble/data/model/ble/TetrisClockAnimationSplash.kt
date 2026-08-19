@@ -7,7 +7,7 @@ package net.agolyakov.tetrisclockble.data.model.ble
  *
  * @param mode how often the animation plays (see [SplashMode]); 0 = off.
  * @param durationValue how long each run lasts (see [SplashDuration]).
- * @param animationIndex the selected animation index (0..7).
+ * @param animationIndex the selected animation index (0..15).
  */
 data class TetrisClockAnimationSplash(
     val mode: Int = SplashMode.OFF.value,

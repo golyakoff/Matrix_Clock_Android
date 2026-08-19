@@ -454,9 +454,18 @@ class TetrisClockBleManager(
         value = value or ((animationIndex shl ANIM_SPLASH_INDEX_SHIFT) and ANIM_SPLASH_INDEX_MASK)
         if (previewNow) value = value or ANIM_SPLASH_PREVIEW_MASK
 
+        // Second byte carries the animation index's high bit (indices 8..15), added in firmware
+        // v1.8.0. Older firmware ignores a write that isn't exactly one byte, so only send it when
+        // it is actually needed - then a clock that predates it still gets animations 0..7.
+        val indexHi = (animationIndex shr ANIM_SPLASH_INDEX_HI_SHIFT) and ANIM_SPLASH_INDEX_HI_MASK
+        val bytes = if (indexHi != 0)
+            byteArrayOf(value.toByte(), indexHi.toByte())
+        else
+            byteArrayOf(value.toByte())
+
         writeCharacteristic(
             mcAnimationSplashCharacteristic,
-            byteArrayOf(value.toByte()),
+            bytes,
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         ).enqueue()
     }
@@ -550,10 +559,12 @@ class TetrisClockBleManager(
         val MC_COLOR_ORDER_CHAR_UUID: UUID = UUID.fromString("36B8588D-6F99-4BDC-8B6F-13089F234978")
 
         // Animation Splash control point: an animated screensaver played at the start of the hour.
-        // Single byte: bits0..1 = cadence mode (0 = off, 1 = daily, 2 = every 3h, 3 = hourly),
-        // bits2..3 = playback duration (0 = 10s, 1 = 20s, 2 = 40s, 3 = 60s), bits4..6 = animation
-        // index (0..7), bit7 = "play now" preview command (fires an immediate one-off preview,
-        // independent of time and mode).
+        // Byte 0: bits0..1 = cadence mode (0 = off, 1 = daily, 2 = every 3h, 3 = hourly),
+        // bits2..3 = playback duration (0 = 10s, 1 = 20s, 2 = 40s, 3 = 60s), bits4..6 = the low
+        // 3 bits of the animation index, bit7 = "play now" preview command (fires an immediate
+        // one-off preview, independent of time and mode).
+        // Byte 1 (firmware v1.8.0+): bit0 = the index's high bit, so the index spans 0..15; the
+        // rest is reserved. Optional in both directions - a one-byte value means index 0..7.
         // Mode: Read, Write
         val MC_ANIMATION_SPLASH_CHAR_UUID: UUID = UUID.fromString("A3F1C2D4-5B6E-47A8-9C0D-1E2F3A4B5C6D")
         const val ANIM_SPLASH_MODE_MASK = 0x03
@@ -562,6 +573,8 @@ class TetrisClockBleManager(
         const val ANIM_SPLASH_INDEX_MASK = 0x70
         const val ANIM_SPLASH_INDEX_SHIFT = 4
         const val ANIM_SPLASH_PREVIEW_MASK = 0x80
+        const val ANIM_SPLASH_INDEX_HI_MASK = 0x01   // byte 1: the high bit of the index
+        const val ANIM_SPLASH_INDEX_HI_SHIFT = 3     // ...which is bit 3 of the index itself
 
         // Hourly brightness schedule: 24 brightness nibbles (0..15), one per hour of day
         // (index 0 = 00h..00:59, ... index 23 = 23h..23:59).

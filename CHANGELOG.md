@@ -1,3 +1,10 @@
+# Release 1.10.0
+
+- [x] Six new Splash animations to pick from, matching clock firmware v1.8.0: Minions, BMO, Finn, Mochi cat, Color bars and Audio tape. The picker still shows exactly what the connected clock ships, so they appear once the clock is updated to v1.8.0; on firmware older than v1.7.0 (which doesn't report the count) the app now shows the four animations that firmware actually had, instead of the whole bundled catalog
+- [x] The animation index sent over BLE widened from 3 to 4 bits (0..15) to fit them: the Animation Splash characteristic is now two bytes, the second carrying the index's high bit. The app only sends that second byte for animations 8..15, so clocks on older firmware keep working exactly as before
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.9.2...v1.10.0
+
 # Release 1.9.2
 
 - [x] The System card now shows the clock's physical flash memory size ("Clock flash memory: N MB"), read over BLE from clock firmware v1.7.0+. Firmware updates now download the release binary that matches that flash size (4MB vs 16MB) instead of always using the 4MB build, so 16MB boards get the right image. On older firmware that doesn't report the size the row is hidden and the 4MB build is used, as before

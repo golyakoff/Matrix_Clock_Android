@@ -60,6 +60,12 @@
     <string name="mc_anim_nyan_cat">Нян Кэт</string>
     <string name="mc_anim_pacman">Пак-Мэн</string>
     <string name="mc_anim_rick_and_morty">Рик и Морти</string>
+    <string name="mc_anim_minions">Миньоны</string>
+    <string name="mc_anim_bmo">БИМО</string>
+    <string name="mc_anim_finn">Финн</string>
+    <string name="mc_anim_mochi_cat">Кот Булочка</string>
+    <string name="mc_anim_color_bars">ТВ таблица</string>
+    <string name="mc_anim_audio_tape">Аудиокассета</string>
     <string name="mc_splash_preview">Посмотреть заставку</string>
     <string name="mc_clock_firmware_version">Версия прошивки часов: %1$s</string>
     <string name="mc_clock_flash_size">Флэш-память часов: %1$d МБ</string>

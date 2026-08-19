@@ -118,13 +118,12 @@ fun DeviceScreen(
     val firmwareVersion: String by viewModel.tetrisClockFirmwareVersion.collectAsState()
     val flashSizeMb: Int by viewModel.tetrisClockFlashSizeMb.collectAsState()
     val animationCount: Int by viewModel.tetrisClockAnimationCount.collectAsState()
-    // Show only the animations the connected clock actually ships (reported over BLE); 0 means older
-    // firmware that doesn't report it, so fall back to the whole bundled catalog. take() caps safely
-    // if the clock ever reports more than the app currently bundles.
-    val visibleSplashAnimations = if (animationCount > 0)
-        viewModel.splashAnimations.take(animationCount)
-    else
-        viewModel.splashAnimations
+    // Show only the animations the connected clock actually ships (reported over BLE); 0 means
+    // firmware older than v1.7.0, which doesn't report it and only ever had the first four.
+    // take() caps safely if the clock ever reports more than the app currently bundles.
+    val visibleSplashAnimations = viewModel.splashAnimations.take(
+        if (animationCount > 0) animationCount else SplashAnimations.LEGACY_COUNT
+    )
     val isOn: Boolean by viewModel.tetrisClockTetrisOn.collectAsState()
     val manualBrightness: Byte by viewModel.tetrisClockManualBrightness.collectAsState()
     val isAutoBrightness: Boolean by viewModel.tetrisClockIsAutoBrightness.collectAsState()

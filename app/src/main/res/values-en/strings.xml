@@ -60,6 +60,12 @@
     <string name="mc_anim_nyan_cat">Nyan Cat</string>
     <string name="mc_anim_pacman">Pac-Man</string>
     <string name="mc_anim_rick_and_morty">Rick &amp; Morty</string>
+    <string name="mc_anim_minions">Minions</string>
+    <string name="mc_anim_bmo">BMO</string>
+    <string name="mc_anim_finn">Finn</string>
+    <string name="mc_anim_mochi_cat">Mochi cat</string>
+    <string name="mc_anim_color_bars">Color bars</string>
+    <string name="mc_anim_audio_tape">Audio tape</string>
     <string name="mc_splash_preview">Preview splash</string>
     <string name="mc_clock_firmware_version">Clock firmware version: %1$s</string>
     <string name="mc_clock_flash_size">Clock flash memory: %1$d MB</string>
