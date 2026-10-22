@@ -101,4 +101,7 @@
     <string name="mc_ota_complete">Update complete!</string>
     <string name="mc_ota_verify_failed">Couldn\'t verify the installation!</string>
     <string name="mc_ota_error">Update failed: %1$s</string>
+    <string name="mc_tab_clock">Clock</string>
+    <string name="mc_tab_settings">Settings</string>
+    <string name="mc_firmware">Firmware</string>
 </resources>

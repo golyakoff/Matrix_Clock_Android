@@ -101,4 +101,7 @@
     <string name="mc_ota_complete">Обновление завершено!</string>
     <string name="mc_ota_verify_failed">Не могу проверить корректность установки!</string>
     <string name="mc_ota_error">Обновление завершилось ошибкой: %1$s</string>
+    <string name="mc_tab_clock">Часы</string>
+    <string name="mc_tab_settings">Настройки</string>
+    <string name="mc_firmware">Прошивка</string>
 </resources>
