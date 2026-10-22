@@ -10,8 +10,8 @@ plugins {
 }
 
 // The app version: bump both together with a new section of CHANGELOG.md
-val appVersionCode = 30
-val appVersionName = "1.10.1"
+val appVersionCode = 31
+val appVersionName = "2.0.0"
 
 // APK name: tetris-clock-vX.Y.Z-<build type>.apk
 base {

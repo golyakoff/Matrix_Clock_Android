@@ -1,3 +1,13 @@
+# Release 2.0.0
+
+- [x] **New layout**: the clock screen has two tabs at the bottom. **Clock** keeps the everyday controls (power, brightness, on/off scenarios, Animation Splash); **Settings** has the time, WiFi, firmware and system cards. The cards look as before
+- [x] **WiFi for the clock** (clock firmware v2.0.0+): turn it on, pick the network from the list of networks the clock itself hears (only 2.4 GHz ones, with their signal at the clock) or type a hidden one, and set how often the clock connects (every 1..24 hours). The clock then syncs its time from the internet and checks for firmware updates by itself; the card shows the connection status and when the time was last received, and can sync it right now. The password is never read back from the clock, and it is sent over an encrypted link only: on the first save Android asks to confirm pairing with the clock
+- [x] **Time zone**: the app gives the clock the phone's time zone on every connection (shown in the time card), so the time from the internet is local, daylight saving time included
+- [x] **Firmware update, two ways**: the phone checks for a newer release as soon as it knows the clock's version (a badge marks the Settings tab when there is one) and offers to install it either **by the clock itself over WiFi** — a dialog follows the download, the restart and the new version, and tells if the clock rolled back to the old one — or **from the phone over Bluetooth**, as before. Clocks with older firmware keep the Bluetooth update only
+- [x] Under the hood: Hilt runs on KSP instead of kapt and Kotlin is AGP 9's built-in one (the build needs much less memory); the new characteristics have a tested codec (`protocol/`); the APK is now named `tetris-clock-vX.Y.Z-<build type>.apk`
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v1.10.1...v2.0.0
+
 # Release 1.10.1
 
 - [x] Fixed the connection appearing to hang after leaving the firmware update screen and coming back: the clock's settings stayed empty and the app sat on "connecting" over a link that was in fact still alive, until the app was restarted. Returning to the device screen asked to connect once more, and a connect request aimed at an already-connected device completes silently inside the BLE library — no connection callback follows it, so nothing re-read the settings the request had just cleared. The app now recognises a fully established connection and leaves it alone. Anything else that reopens the device screen while connected was affected in the same way
