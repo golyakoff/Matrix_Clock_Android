@@ -86,6 +86,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     ksp(libs.hilt.compiler)
     implementation(libs.nordic.ble)
+    implementation(libs.nordic.ble.ktx)
 
     // Coil for rendering animated GIF previews of the splash animations
     implementation(libs.coil.compose)

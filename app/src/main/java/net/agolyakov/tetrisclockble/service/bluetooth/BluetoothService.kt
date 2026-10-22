@@ -7,6 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +26,24 @@ import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAnimationSplash
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
+import net.agolyakov.tetrisclockble.protocol.ClockCommand
+import net.agolyakov.tetrisclockble.protocol.NetworkCodec
+import net.agolyakov.tetrisclockble.protocol.OtaStatus
+import net.agolyakov.tetrisclockble.protocol.TimeZoneMapper
+import net.agolyakov.tetrisclockble.protocol.UpdateInfo
+import net.agolyakov.tetrisclockble.protocol.WifiNetwork
+import net.agolyakov.tetrisclockble.protocol.WifiScan
+import net.agolyakov.tetrisclockble.protocol.WifiScanState
+import net.agolyakov.tetrisclockble.protocol.WifiSettings
+import net.agolyakov.tetrisclockble.protocol.WifiSettingsUpdate
+import net.agolyakov.tetrisclockble.protocol.WifiStatus
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_COMMAND_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_OTA_STATUS_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_TIME_ZONE_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_UPDATE_INFO_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_WIFI_NETWORKS_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_WIFI_SETTINGS_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_WIFI_STATUS_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationSplashReadCharacteristicHandler
@@ -38,6 +60,8 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.FlashSizeReadChar
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationCountReadCharacteristicHandler
 import no.nordicsemi.android.ble.observer.ConnectionObserver
 import java.time.LocalDateTime
+import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -187,6 +211,34 @@ class BluetoothService @Inject constructor(
         _tetrisClockAnimationCount
     )
 
+    // Region: network characteristics (firmware v2.0.0+: time zone, WiFi, update from the internet)
+    // Their values are raw bytes in TetrisClockBleManager, decoded here with protocol.NetworkCodec.
+    // All of them stay null (and networkSupported false) for a clock with older firmware.
+    private val networkScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private val _networkSupported = MutableStateFlow(false)
+    val networkSupported: StateFlow<Boolean> = _networkSupported.asStateFlow()
+
+    private val _timeZone = MutableStateFlow<String?>(null)
+    val timeZone: StateFlow<String?> = _timeZone.asStateFlow()
+
+    private val _wifiSettings = MutableStateFlow<WifiSettings?>(null)
+    val wifiSettings: StateFlow<WifiSettings?> = _wifiSettings.asStateFlow()
+
+    private val _wifiStatus = MutableStateFlow<WifiStatus?>(null)
+    val wifiStatus: StateFlow<WifiStatus?> = _wifiStatus.asStateFlow()
+
+    // All networks of the last scan (every page read), or just the scan state while it runs
+    private val _wifiScan = MutableStateFlow<WifiScan?>(null)
+    val wifiScan: StateFlow<WifiScan?> = _wifiScan.asStateFlow()
+
+    private val _updateInfo = MutableStateFlow<UpdateInfo?>(null)
+    val updateInfo: StateFlow<UpdateInfo?> = _updateInfo.asStateFlow()
+
+    // Progress of an installation from the internet (null until the clock reports one)
+    private val _otaStatus = MutableStateFlow<OtaStatus?>(null)
+    val otaStatus: StateFlow<OtaStatus?> = _otaStatus.asStateFlow()
+
     // Region: BleManager and Bluetooth internals
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
@@ -225,6 +277,7 @@ class BluetoothService @Inject constructor(
         override fun onDeviceReady(device: BluetoothDevice) {
             _connectionState.value = ConnectionState.Ready
             startReadingAllCharacteristics()
+            networkScope.launch { initNetwork() }
         }
 
         override fun onDeviceDisconnecting(device: BluetoothDevice) {
@@ -250,6 +303,7 @@ class BluetoothService @Inject constructor(
 
     init {
         bleManager.connectionObserver = connectionObserver
+        bleManager.onNetworkNotification = ::onNetworkNotification
     }
 
     // Resets all cached characteristic values back to their defaults.
@@ -292,6 +346,14 @@ class BluetoothService @Inject constructor(
 
         _tetrisClockFlashSizeMb.value = 0
         _tetrisClockAnimationCount.value = 0
+
+        _networkSupported.value = false
+        _timeZone.value = null
+        _wifiSettings.value = null
+        _wifiStatus.value = null
+        _wifiScan.value = null
+        _updateInfo.value = null
+        _otaStatus.value = null
     }
 
     fun connect(tetrisClockDevice: TetrisClockDevice, useAutoConnect: Boolean = false) {
@@ -543,6 +605,104 @@ class BluetoothService @Inject constructor(
                 bleManager.setTurnOffAlarmCharacteristic(newAlarm)
             }
         }
+    }
+
+    // Region: network (firmware v2.0.0+)
+
+    // Reads the network characteristics once the link is ready, and gives the clock the phone's
+    // time zone: the clock converts the UTC time it gets from the internet into local time with it.
+    private suspend fun initNetwork() {
+        val supported = bleManager.hasNetworkCharacteristics()
+        _networkSupported.value = supported
+        if (!supported) return
+        try {
+            _wifiSettings.value = NetworkCodec.decodeWifiSettings(bleManager.readNetwork(MC_WIFI_SETTINGS_CHAR_UUID))
+            _wifiStatus.value = NetworkCodec.decodeWifiStatus(bleManager.readNetwork(MC_WIFI_STATUS_CHAR_UUID))
+            _updateInfo.value = NetworkCodec.decodeUpdateInfo(bleManager.readNetwork(MC_UPDATE_INFO_CHAR_UUID))
+            _otaStatus.value = NetworkCodec.decodeOtaStatus(bleManager.readNetwork(MC_OTA_STATUS_CHAR_UUID))
+
+            val clockZone = NetworkCodec.decodeTimeZone(bleManager.readNetwork(MC_TIME_ZONE_CHAR_UUID))
+            val phoneZone = TimeZoneMapper.toPosix(ZoneId.systemDefault())
+            if (clockZone != phoneZone) {
+                Log.i(_tag, "Time zone of the clock '$clockZone' -> '$phoneZone'")
+                bleManager.writeNetwork(MC_TIME_ZONE_CHAR_UUID, NetworkCodec.encodeTimeZone(phoneZone))
+            }
+            _timeZone.value = phoneZone
+        } catch (e: Exception) {
+            Log.w(_tag, "Reading the network characteristics failed", e)
+        }
+    }
+
+    private fun onNetworkNotification(uuid: UUID, value: ByteArray) {
+        try {
+            when (uuid) {
+                MC_WIFI_STATUS_CHAR_UUID -> _wifiStatus.value = NetworkCodec.decodeWifiStatus(value)
+                MC_UPDATE_INFO_CHAR_UUID -> _updateInfo.value = NetworkCodec.decodeUpdateInfo(value)
+                MC_OTA_STATUS_CHAR_UUID -> _otaStatus.value = NetworkCodec.decodeOtaStatus(value)
+                MC_WIFI_NETWORKS_CHAR_UUID -> {
+                    // A scan start / end: the header only, the list is read page by page
+                    val header = NetworkCodec.decodeWifiScan(value)
+                    if (header.state == WifiScanState.DONE) {
+                        networkScope.launch { readWifiNetworks() }
+                    } else {
+                        _wifiScan.value = header.copy(networks = emptyList())
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(_tag, "Bad notification of $uuid", e)
+        }
+    }
+
+    // Reads every page of the scan result (the clock resets its page cursor after each scan)
+    private suspend fun readWifiNetworks() {
+        try {
+            val networks = mutableListOf<WifiNetwork>()
+            var page = NetworkCodec.decodeWifiScan(bleManager.readNetwork(MC_WIFI_NETWORKS_CHAR_UUID))
+            networks += page.networks
+            while (page.state == WifiScanState.DONE && page.networks.isNotEmpty() && page.first + page.networks.size < page.total) {
+                bleManager.writeNetwork(MC_WIFI_NETWORKS_CHAR_UUID, NetworkCodec.encodeWifiScanCursor(page.first + page.networks.size))
+                page = NetworkCodec.decodeWifiScan(bleManager.readNetwork(MC_WIFI_NETWORKS_CHAR_UUID))
+                networks += page.networks
+            }
+            _wifiScan.value = WifiScan(page.state, page.total, 0, networks)
+        } catch (e: Exception) {
+            Log.w(_tag, "Reading the WiFi networks failed", e)
+            _wifiScan.value = WifiScan(WifiScanState.ERROR, 0, 0, emptyList())
+        }
+    }
+
+    /**
+     * Saves the WiFi settings (the phone bonds with the clock first, see
+     * TetrisClockBleManager.writeWifiSettings) and reads them back.
+     *
+     * @return false if the clock could not be written to (not paired, link lost, invalid values).
+     */
+    suspend fun saveWifiSettings(update: WifiSettingsUpdate): Boolean = try {
+        bleManager.writeWifiSettings(NetworkCodec.encodeWifiSettings(update))
+        _wifiSettings.value = NetworkCodec.decodeWifiSettings(bleManager.readNetwork(MC_WIFI_SETTINGS_CHAR_UUID))
+        true
+    } catch (e: Exception) {
+        Log.w(_tag, "Saving the WiFi settings failed", e)
+        false
+    }
+
+    /** Sends a command to the clock; the results come as notifications (status, scan, update info, OTA). */
+    suspend fun sendClockCommand(command: ClockCommand): Boolean = try {
+        if (command == ClockCommand.SCAN_WIFI) {
+            _wifiScan.value = WifiScan(WifiScanState.SCANNING, 0, 0, emptyList())
+        }
+        if (command == ClockCommand.INSTALL_UPDATE) {
+            _otaStatus.value = null
+        }
+        bleManager.writeNetwork(MC_COMMAND_CHAR_UUID, NetworkCodec.encodeCommand(command))
+        true
+    } catch (e: Exception) {
+        Log.w(_tag, "Command $command failed", e)
+        if (command == ClockCommand.SCAN_WIFI) {
+            _wifiScan.value = WifiScan(WifiScanState.ERROR, 0, 0, emptyList())
+        }
+        false
     }
 
     // Region: OTA Update

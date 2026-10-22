@@ -27,6 +27,7 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.FlashSizeReadChar
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationCountReadCharacteristicHandler
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
+import no.nordicsemi.android.ble.ktx.suspend
 import java.util.UUID
 
 class TetrisClockBleManager(
@@ -73,6 +74,13 @@ class TetrisClockBleManager(
     private var mcOtaControlCharacteristic: BluetoothGattCharacteristic? = null
     private var mcOtaDataCharacteristic: BluetoothGattCharacteristic? = null
 
+    // Network characteristics of firmware v2.0.0+ (time zone, WiFi, update from the internet). They
+    // move raw bytes: protocol.NetworkCodec knows the format, BluetoothService keeps the state.
+    private var networkCharacteristics: Map<UUID, BluetoothGattCharacteristic> = emptyMap()
+
+    /** Called with every notification of a network characteristic (uuid, value). */
+    var onNetworkNotification: ((UUID, ByteArray) -> Unit)? = null
+
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
         gatt.getService(SERVICE_CONTROL_UUID)?.let { service ->
             mcTimeCharacteristic = service.getCharacteristic(MC_TIME_CHAR_UUID)
@@ -91,6 +99,9 @@ class TetrisClockBleManager(
             mcAnimationCountCharacteristic = service.getCharacteristic(MC_ANIMATION_COUNT_CHAR_UUID)
             mcOtaControlCharacteristic = service.getCharacteristic(MC_OTA_CONTROL_CHAR_UUID)
             mcOtaDataCharacteristic = service.getCharacteristic(MC_OTA_DATA_CHAR_UUID)
+            networkCharacteristics = NETWORK_CHAR_UUIDS
+                .mapNotNull { uuid -> service.getCharacteristic(uuid)?.let { uuid to it } }
+                .toMap()
         }
 
         return mcTimeCharacteristic != null
@@ -127,6 +138,7 @@ class TetrisClockBleManager(
         mcAnimationCountCharacteristic = null
         mcOtaControlCharacteristic = null
         mcOtaDataCharacteristic = null
+        networkCharacteristics = emptyMap()
     }
 
     override fun initialize() {
@@ -210,6 +222,14 @@ class TetrisClockBleManager(
         }
 
         // Version characteristic notifications
+        for (uuid in NETWORK_NOTIFYING_CHAR_UUIDS) {
+            val characteristic = networkCharacteristics[uuid] ?: continue
+            setNotificationCallback(characteristic).with { _, data ->
+                data.value?.let { onNetworkNotification?.invoke(uuid, it) }
+            }
+            enableNotifications(characteristic).enqueue()
+        }
+
         versionReadCharacteristicHandler.let {
             setNotificationCallback(mcVersionCharacteristic)
                 .with { device: BluetoothDevice?, data: Data? ->
@@ -533,6 +553,33 @@ class TetrisClockBleManager(
         }.enqueue()
     }
 
+    /** Whether the clock has the network characteristics (firmware v2.0.0+). */
+    fun hasNetworkCharacteristics(): Boolean = MC_TIME_ZONE_CHAR_UUID in networkCharacteristics
+
+    private fun networkCharacteristic(uuid: UUID): BluetoothGattCharacteristic =
+        networkCharacteristics[uuid] ?: throw IllegalStateException("Not connected (no characteristic $uuid)")
+
+    /** Reads a network characteristic; throws on a GATT error. */
+    suspend fun readNetwork(uuid: UUID): ByteArray =
+        readCharacteristic(networkCharacteristic(uuid)).suspend().value ?: ByteArray(0)
+
+    /** Writes a network characteristic with response; throws on a GATT error. */
+    suspend fun writeNetwork(uuid: UUID, value: ByteArray) {
+        writeCharacteristic(networkCharacteristic(uuid), value, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT).suspend()
+    }
+
+    /**
+     * Writes the WiFi settings: the clock accepts the write over an encrypted link only (the password
+     * goes over the air), so the phone bonds first ("Just Works", Android shows its pairing prompt).
+     * createBondInsecure completes at once when the phone is already bonded.
+     */
+    suspend fun writeWifiSettings(value: ByteArray) {
+        if (bluetoothDevice?.bondState != BluetoothDevice.BOND_BONDED) {
+            createBondInsecure().suspend()
+        }
+        writeNetwork(MC_WIFI_SETTINGS_CHAR_UUID, value)
+    }
+
     companion object {
         // Matrix Clock Service
         val SERVICE_CONTROL_UUID: UUID = UUID.fromString("5DE498A1-E7A6-4F4A-B323-913741895AD0")
@@ -621,6 +668,35 @@ class TetrisClockBleManager(
         // Number of Animation Splash animations this firmware build ships (1 byte)
         // M Read
         val MC_ANIMATION_COUNT_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4F6")
+
+        // Network characteristics of firmware v2.0.0+, optional: older firmware lacks them and the
+        // app hides WiFi and the update from the internet then. The byte formats are documented
+        // next to these UUIDs in the firmware's main/include/ble.h; protocol.NetworkCodec
+        // implements them.
+        // POSIX TZ string of the clock's time zone. Mode: Read, Write
+        val MC_TIME_ZONE_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4F7")
+        // WiFi mode, period, SSID, password (never read back). Mode: Read, Write (encrypted link)
+        val MC_WIFI_SETTINGS_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4F8")
+        // WiFi state, IP, RSSI, last time sync. Mode: Read, Notify
+        val MC_WIFI_STATUS_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4F9")
+        // Networks the clock hears, read page by page. Mode: Read, Write (page cursor), Notify
+        val MC_WIFI_NETWORKS_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FA")
+        // Commands: sync time, check update, install update, scan networks. Mode: Write
+        val MC_COMMAND_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FB")
+        // The clock's own last update check. Mode: Read, Notify
+        val MC_UPDATE_INFO_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FC")
+        // Progress of an installation from the internet. Mode: Read, Notify
+        val MC_OTA_STATUS_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FD")
+
+        val NETWORK_CHAR_UUIDS = listOf(
+            MC_TIME_ZONE_CHAR_UUID, MC_WIFI_SETTINGS_CHAR_UUID, MC_WIFI_STATUS_CHAR_UUID,
+            MC_WIFI_NETWORKS_CHAR_UUID, MC_COMMAND_CHAR_UUID, MC_UPDATE_INFO_CHAR_UUID,
+            MC_OTA_STATUS_CHAR_UUID
+        )
+        val NETWORK_NOTIFYING_CHAR_UUIDS = listOf(
+            MC_WIFI_STATUS_CHAR_UUID, MC_WIFI_NETWORKS_CHAR_UUID, MC_UPDATE_INFO_CHAR_UUID,
+            MC_OTA_STATUS_CHAR_UUID
+        )
 
         // BLE Device OTA update process control point
         // M Write
