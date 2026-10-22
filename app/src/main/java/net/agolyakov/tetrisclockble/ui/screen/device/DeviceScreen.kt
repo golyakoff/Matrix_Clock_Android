@@ -2,6 +2,14 @@
 
 package net.agolyakov.tetrisclockble.ui.screen.device
 
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import net.agolyakov.tetrisclockble.protocol.UpdateCheckState
+import net.agolyakov.tetrisclockble.protocol.WifiSettingsUpdate
+import net.agolyakov.tetrisclockble.protocol.WifiMode
+import net.agolyakov.tetrisclockble.protocol.WifiSettings
+import net.agolyakov.tetrisclockble.protocol.WifiState
+import net.agolyakov.tetrisclockble.protocol.WifiStatus
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -78,6 +86,7 @@ fun DeviceScreen(
     val turnOffAlarm: TetrisClockAlarm by viewModel.tetrisClockTurnOffAlarm.collectAsState()
     val agingOffset: Int by viewModel.tetrisClockAgingOffset.collectAsState()
     val rtcTemperature: Float by viewModel.tetrisClockRtcTemperature.collectAsState()
+    val networkUiState: NetworkUiState by viewModel.networkUiState.collectAsState()
 
     if (timePickerState.isVisible) {
         TimePickerDialog(
@@ -172,7 +181,9 @@ fun DeviceScreen(
         },
         onFirmwareUpdateButtonClickAction = {
             navController.navigate(Screen.Firmware.route)
-        }
+        },
+        network = networkUiState,
+        networkActions = viewModel
     )
 }
 
@@ -221,8 +232,14 @@ fun DeviceSettings(
     turnOffAlarmOnTimeClick: () -> Unit,
     turnOffAlarmOnActiveToggle: () -> Unit,
     onFirmwareUpdateButtonClickAction: () -> Unit,
+    network: NetworkUiState = NetworkUiState(),
+    networkActions: NetworkActions = NoNetworkActions,
     initialTab: DeviceTab = DeviceTab.CLOCK
 ) {
+    // A newer firmware found by the phone or by the clock itself
+    val updateAvailable = network.firmwareCheck is FirmwareCheck.Available ||
+        network.updateInfo?.state == UpdateCheckState.AVAILABLE
+
     var selectedTab by rememberSaveable { mutableStateOf(initialTab) }
     // Each tab keeps its scroll position while the other one is shown
     val tabStateHolder = rememberSaveableStateHolder()
@@ -235,7 +252,13 @@ fun DeviceSettings(
                     NavigationBarItem(
                         selected = tab == selectedTab,
                         onClick = { selectedTab = tab },
-                        icon = { Icon(tab.icon, contentDescription = null) },
+                        icon = {
+                            if (tab == DeviceTab.SETTINGS && updateAvailable) {
+                                BadgedBox(badge = { Badge() }) { Icon(tab.icon, contentDescription = null) }
+                            } else {
+                                Icon(tab.icon, contentDescription = null)
+                            }
+                        },
                         label = { Text(stringResource(tab.labelRes)) }
                     )
                 }
@@ -289,12 +312,24 @@ fun DeviceSettings(
                         flashSizeMb = flashSizeMb,
                         rtcTemperature = rtcTemperature,
                         isRrbbggColorOrder = isRrbbggColorOrder,
-                        onColorOrderSelected = onColorOrderSelected
+                        onColorOrderSelected = onColorOrderSelected,
+                        network = network,
+                        networkActions = networkActions
                     )
                 }
             }
         }
     }
+}
+
+/** For the previews: no clock to talk to. */
+private object NoNetworkActions : NetworkActions {
+    override fun saveWifiSettings(update: WifiSettingsUpdate) {}
+    override fun scanWifi() {}
+    override fun syncTimeFromInternet() {}
+    override fun checkFirmware() {}
+    override fun installFirmwareByWifi() {}
+    override fun dismissWifiUpdate() {}
 }
 
 /** The scrolling column of cards every tab is laid out in. */
@@ -436,6 +471,13 @@ fun DeviceSettings_State2_Preview(){
             turnOffAlarmOnTimeClick = {},
             turnOffAlarmOnActiveToggle = {},
             onFirmwareUpdateButtonClickAction = {},
+            network = NetworkUiState(
+                supported = true,
+                timeZone = "MSK-3",
+                wifiSettings = WifiSettings(WifiMode.PERIODIC, 1, "HomeNet", passwordStored = true),
+                wifiStatus = WifiStatus(WifiState.OFF, null, 0, 1792665600L),
+                firmwareCheck = FirmwareCheck.Available("v2.1.0")
+            ),
             initialTab = DeviceTab.SETTINGS
         )
     }

@@ -10,8 +10,21 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import net.agolyakov.tetrisclockble.R
+import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
+import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
+import net.agolyakov.tetrisclockble.protocol.ClockCommand
+import net.agolyakov.tetrisclockble.protocol.OtaError
+import net.agolyakov.tetrisclockble.protocol.OtaState
+import net.agolyakov.tetrisclockble.protocol.WifiSettingsUpdate
 import net.agolyakov.tetrisclockble.data.model.ble.SplashAnimations
 import net.agolyakov.tetrisclockble.data.model.ble.SplashMode
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarmType
@@ -28,8 +41,9 @@ import javax.inject.Inject
 class DeviceViewModel @Inject constructor(
     private val preferences: TetrisClockPreferences,
     val bluetoothService: BluetoothService,
+    private val firmwareRepository: FirmwareRepository,
     savedStateHandle: SavedStateHandle
-): ViewModel() {
+): ViewModel(), NetworkActions {
     // Device and its FriendlyName
     private val _device = MutableStateFlow<TetrisClockDevice?>(null)
     val device: StateFlow<TetrisClockDevice?> = _device.asStateFlow()
@@ -130,6 +144,140 @@ class DeviceViewModel @Inject constructor(
             bluetoothService.connect(it)
             setupDebouncedBrightness()
         }
+    }
+
+    // ---------- Network: WiFi, time zone, firmware update (firmware v2.0.0+) ----------
+
+    private val _wifiSaveFailed = MutableStateFlow(false)
+    private val _firmwareCheck = MutableStateFlow<FirmwareCheck>(FirmwareCheck.Idle)
+    private val _wifiUpdate = MutableStateFlow<WifiUpdate?>(null)
+
+    val networkUiState: StateFlow<NetworkUiState> = combine(
+        combine(
+            bluetoothService.networkSupported,
+            bluetoothService.timeZone,
+            bluetoothService.wifiSettings,
+            bluetoothService.wifiStatus,
+            bluetoothService.wifiScan,
+        ) { supported, timeZone, settings, status, scan ->
+            NetworkUiState(supported, timeZone, settings, status, scan)
+        },
+        _wifiSaveFailed,
+        bluetoothService.updateInfo,
+        _firmwareCheck,
+        _wifiUpdate,
+    ) { state, saveFailed, updateInfo, firmwareCheck, wifiUpdate ->
+        state.copy(
+            wifiSaveFailed = saveFailed,
+            updateInfo = updateInfo,
+            firmwareCheck = firmwareCheck,
+            wifiUpdate = wifiUpdate
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NetworkUiState())
+
+    // After the properties above: the coroutine may run checkFirmware() right away
+    init {
+        // The phone checks for a firmware update once the clock's version is known
+        viewModelScope.launch {
+            tetrisClockFirmwareVersion.first { it != UNKNOWN_VERSION }
+            checkFirmware()
+        }
+    }
+
+    override fun saveWifiSettings(update: WifiSettingsUpdate) {
+        viewModelScope.launch {
+            _wifiSaveFailed.value = false
+            _wifiSaveFailed.value = !bluetoothService.saveWifiSettings(update)
+        }
+    }
+
+    override fun scanWifi() {
+        viewModelScope.launch { bluetoothService.sendClockCommand(ClockCommand.SCAN_WIFI) }
+    }
+
+    override fun syncTimeFromInternet() {
+        viewModelScope.launch { bluetoothService.sendClockCommand(ClockCommand.SYNC_TIME) }
+    }
+
+    override fun checkFirmware() {
+        if (_firmwareCheck.value == FirmwareCheck.Checking) return
+        viewModelScope.launch {
+            _firmwareCheck.value = FirmwareCheck.Checking
+            _firmwareCheck.value = try {
+                when (val state = firmwareRepository.checkForUpdates()) {
+                    is FirmwareRepository.UpdateState.UpdateAvailable -> FirmwareCheck.Available(state.release.tagName)
+                    is FirmwareRepository.UpdateState.NoUpdate -> FirmwareCheck.UpToDate
+                    else -> FirmwareCheck.Failed
+                }
+            } catch (e: Exception) {
+                Log.w("DeviceViewModel", "Firmware update check failed", e)
+                FirmwareCheck.Failed
+            }
+        }
+    }
+
+    // The clock downloads and installs the update by itself (Command 0x03); the phone follows the
+    // OTA status notifications, then waits for the clock to come back and compares the version
+    override fun installFirmwareByWifi() {
+        if (_wifiUpdate.value?.finished == false) return
+        viewModelScope.launch {
+            val oldVersion = tetrisClockFirmwareVersion.value
+            _wifiUpdate.value = WifiUpdate.Checking
+            if (!bluetoothService.sendClockCommand(ClockCommand.INSTALL_UPDATE)) {
+                _wifiUpdate.value = WifiUpdate.Failed(R.string.mc_fw_error_not_sent)
+                return@launch
+            }
+
+            val last = withTimeoutOrNull(WIFI_UPDATE_TIMEOUT_MS) {
+                bluetoothService.otaStatus
+                    .filterNotNull()
+                    .first { status ->
+                        when (status.state) {
+                            OtaState.CHECKING -> _wifiUpdate.value = WifiUpdate.Checking
+                            OtaState.RECEIVING -> _wifiUpdate.value = WifiUpdate.Downloading(status.received, status.total)
+                            else -> Unit
+                        }
+                        status.state == OtaState.SUCCESS || status.state == OtaState.ERROR || status.state == OtaState.NO_UPDATE
+                    }
+            }
+            when (last?.state) {
+                OtaState.SUCCESS -> Unit
+                OtaState.NO_UPDATE -> { _wifiUpdate.value = WifiUpdate.Failed(R.string.mc_fw_error_no_update); return@launch }
+                OtaState.ERROR -> { _wifiUpdate.value = WifiUpdate.Failed(otaErrorMessage(last.error)); return@launch }
+                // The link may be gone mid-download: the clock goes on, the result is unknown
+                else -> { _wifiUpdate.value = WifiUpdate.Failed(R.string.mc_fw_error_not_verified); return@launch }
+            }
+
+            _wifiUpdate.value = WifiUpdate.Rebooting
+            val newVersion = withTimeoutOrNull(WIFI_UPDATE_REBOOT_TIMEOUT_MS) {
+                connectionState.first { it !is ConnectionState.Ready }
+                connectionState.first { it is ConnectionState.Ready }
+                bluetoothService.getCurrentVersion()
+            }
+            _wifiUpdate.value = when (newVersion) {
+                null, UNKNOWN_VERSION -> WifiUpdate.Failed(R.string.mc_fw_error_not_verified)
+                oldVersion -> WifiUpdate.RolledBack(oldVersion)
+                else -> WifiUpdate.Done(newVersion)
+            }
+            if (newVersion != null && newVersion != oldVersion) checkFirmware()
+        }
+    }
+
+    override fun dismissWifiUpdate() {
+        _wifiUpdate.value = null
+    }
+
+    private fun otaErrorMessage(error: OtaError): Int = when (error) {
+        OtaError.BUSY -> R.string.mc_fw_error_busy
+        OtaError.FLASH_WRITE -> R.string.mc_fw_error_flash
+        OtaError.SHA256_MISMATCH -> R.string.mc_fw_error_sha
+        else -> R.string.mc_fw_error_download
+    }
+
+    companion object {
+        private const val UNKNOWN_VERSION = "Unknown"
+        private const val WIFI_UPDATE_TIMEOUT_MS = 10 * 60 * 1000L
+        private const val WIFI_UPDATE_REBOOT_TIMEOUT_MS = 90 * 1000L
     }
 
     fun connectToDevice(device: TetrisClockDevice?)

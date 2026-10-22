@@ -43,11 +43,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import net.agolyakov.tetrisclockble.R
+import net.agolyakov.tetrisclockble.protocol.TimeZoneMapper
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.ui.theme.displayFontFamily
 import net.agolyakov.tetrisclockble.ui.theme.timeHeadlineMedium
 
-/** Rarely touched settings: time, firmware, the panel and the clock's hardware. */
+/** Rarely touched settings: time, WiFi, firmware, the panel and the clock's hardware. */
 @Composable
 fun SettingsTab(
     bleTime: TetrisClockTime,
@@ -60,7 +61,9 @@ fun SettingsTab(
     flashSizeMb: Int,
     rtcTemperature: Float,
     isRrbbggColorOrder: Boolean,
-    onColorOrderSelected: (Boolean) -> Unit
+    onColorOrderSelected: (Boolean) -> Unit,
+    network: NetworkUiState,
+    networkActions: NetworkActions
 ) {
     TimeSyncCard(
         modifier = Modifier,
@@ -68,13 +71,26 @@ fun SettingsTab(
         phoneTime,
         onButtonSyncClickAction,
         agingOffset,
-        onAgingOffsetDialogValueChanged
+        onAgingOffsetDialogValueChanged,
+        timeZone = network.timeZone
     )
 
+    // Firmware v2.0.0+ only
+    network.wifiSettings?.takeIf { network.supported }?.let { saved ->
+        WifiCard(
+            saved = saved,
+            status = network.wifiStatus,
+            scan = network.wifiScan,
+            saveFailed = network.wifiSaveFailed,
+            actions = networkActions
+        )
+    }
+
     FirmwareCard(
-        modifier = Modifier,
-        firmwareVersion,
-        onFirmwareUpdateButtonClickAction
+        firmwareVersion = firmwareVersion,
+        network = network,
+        actions = networkActions,
+        onInstallOverBluetooth = onFirmwareUpdateButtonClickAction
     )
 
     SystemInfoCard(
@@ -94,6 +110,7 @@ fun TimeSyncCard(
     onButtonSyncClickAction: () -> Unit,
     agingOffset: Int,
     onAgingOffsetDialogValueChanged: (Int) -> Unit,
+    timeZone: String? = null,
 ) {
     var showAgingOffsetDialog by remember { mutableStateOf(false) }
 
@@ -132,6 +149,17 @@ fun TimeSyncCard(
                     title = stringResource(R.string.mc_time_of_mobile_phone),
                     time = phoneTime,
                     modifier = Modifier.weight(1f)
+                )
+            }
+
+            // The clock's time zone (firmware v2.0.0+): the app keeps it the phone's one
+            timeZone?.let { zone ->
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.mc_time_zone, timeZoneLabel(zone)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 
@@ -298,53 +326,6 @@ fun AgingOffsetDialog(
 }
 
 @Composable
-fun FirmwareCard(
-    modifier: Modifier,
-    firmwareVersion: String,
-    onFirmwareUpdateButtonClickAction: () -> Unit
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        )
-        {
-            CardTitle(
-                Icons.Default.Memory,
-                stringResource(R.string.mc_firmware)
-            )
-
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = stringResource(R.string.mc_clock_firmware_version, firmwareVersion),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            CardButtonWide(
-                Icons.Default.SystemUpdateAlt,
-                stringResource(R.string.mc_firmware_update_title),
-                onFirmwareUpdateButtonClickAction,
-                false
-            )
-        }
-    }
-}
-
-@Composable
 fun SystemInfoCard(
     modifier: Modifier,
     flashSizeMb: Int,
@@ -460,4 +441,17 @@ fun PixelColorOrderSelector(
             )
         }
     }
+}
+
+/** A POSIX TZ string as people read it: "UTC+3", or "UTC+1, UTC+2 in summer". */
+@Composable
+private fun timeZoneLabel(posix: String): String {
+    val offsets = TimeZoneMapper.parseOffsets(posix) ?: return posix
+    fun utc(minutes: Int): String {
+        val sign = if (minutes < 0) "-" else "+"
+        val abs = kotlin.math.abs(minutes)
+        return if (abs % 60 == 0) "UTC$sign${abs / 60}" else "UTC$sign${abs / 60}:%02d".format(abs % 60)
+    }
+    val standard = utc(offsets.standardMinutes)
+    return offsets.daylightMinutes?.let { stringResource(R.string.mc_time_zone_dst, standard, utc(it)) } ?: standard
 }
