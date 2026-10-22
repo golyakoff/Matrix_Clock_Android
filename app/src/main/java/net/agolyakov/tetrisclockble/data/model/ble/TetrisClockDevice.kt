@@ -1,14 +1,14 @@
 package net.agolyakov.tetrisclockble.data.model.ble
 
-import android.os.Parcelable
-import kotlinx.parcelize.Parcelize
+import java.io.Serializable
 
-@Parcelize
+// Serializable rather than Parcelable: Parcelize needs a compiler plugin, and the app builds with
+// AGP's built-in Kotlin (see app/build.gradle.kts). Passed between screens via SavedStateHandle.
 data class TetrisClockDevice(
     val deviceName: String,             // Имя устройства, заданное производителем
     val macAddress: String,             // MAC-адрес
     val friendlyName: String? = null,   // Опционально заданное пользователем имя
-) : Parcelable {
+) : Serializable {
     fun getDisplayName(): String {
         return friendlyName ?: deviceName
     }

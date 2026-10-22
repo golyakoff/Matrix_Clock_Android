@@ -1,13 +1,21 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
+// Hilt runs on KSP, not kapt, and Kotlin is AGP 9's built-in one (no kotlin-android plugin): kapt's
+// Java stub generation was the step that ran the ~4 GB dev box out of memory
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
-    kotlin("kapt")
-    alias(libs.plugins.parcelize)
+    alias(libs.plugins.ksp)
+}
+
+// The app version: bump both together with a new section of CHANGELOG.md
+val appVersionCode = 30
+val appVersionName = "1.10.1"
+
+// APK name: tetris-clock-vX.Y.Z-<build type>.apk
+base {
+    archivesName = "tetris-clock-v$appVersionName"
 }
 
 android {
@@ -18,19 +26,10 @@ android {
         applicationId = "net.agolyakov.tetrisclockble"
         minSdk = 28     // Android 9
         targetSdk = 36  // Android 16
-        versionCode = 30
-        versionName = "1.10.1"
+        versionCode = appVersionCode
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
-    applicationVariants.all {
-        outputs.all {
-            val variantName = name
-            val apkOutput = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            apkOutput.outputFileName =
-                "tetris-clock-${variantName}-v${versionName}.apk"
-        }
     }
 
     buildTypes {
@@ -46,19 +45,20 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    tasks.withType<KotlinJvmCompile>().configureEach {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-            freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
-            freeCompilerArgs.add("-Xannotation-default-target=param-property")
-        }
-    }
     buildFeatures {
         compose = true
         buildConfig = true
     }
     androidResources {
         generateLocaleConfig = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_11)
+        freeCompilerArgs.add("-opt-in=kotlin.RequiresOptIn")
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
 }
 
@@ -84,7 +84,7 @@ dependencies {
     implementation(libs.androidx.ui.text)
     implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.androidx.appcompat)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.nordic.ble)
 
     // Coil for rendering animated GIF previews of the splash animations
