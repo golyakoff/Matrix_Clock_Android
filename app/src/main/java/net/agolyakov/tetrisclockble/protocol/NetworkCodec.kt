@@ -22,6 +22,23 @@ object NetworkCodec {
 
     fun decodeTimeZone(bytes: ByteArray): String = ByteReader(bytes).restAsString()
 
+    // ---------- Device name ----------
+
+    /** BLE name length limit (NET_NAME_MAX_LEN), in UTF-8 bytes. */
+    const val DEVICE_NAME_MAX_BYTES = 20
+
+    /** Whether the clock takes this name: up to [DEVICE_NAME_MAX_BYTES] bytes, no control characters. */
+    fun isValidDeviceName(name: String): Boolean =
+        name.toByteArray(Charsets.UTF_8).size <= DEVICE_NAME_MAX_BYTES && name.none { it < ' ' || it == '\u007f' }
+
+    /** An empty name restores the clock's default "Tetris Clock XXXX". */
+    fun encodeDeviceName(name: String): ByteArray {
+        require(isValidDeviceName(name)) { "Bad device name \"$name\"" }
+        return name.toByteArray(Charsets.UTF_8)
+    }
+
+    fun decodeDeviceName(bytes: ByteArray): String = ByteReader(bytes).restAsString()
+
     // ---------- WiFi settings ----------
 
     fun decodeWifiSettings(bytes: ByteArray): WifiSettings = with(ByteReader(bytes)) {

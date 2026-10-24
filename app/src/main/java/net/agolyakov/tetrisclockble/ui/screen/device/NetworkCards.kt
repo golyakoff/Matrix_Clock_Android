@@ -66,6 +66,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.agolyakov.tetrisclockble.R
+import net.agolyakov.tetrisclockble.protocol.NetworkCodec
 import net.agolyakov.tetrisclockble.protocol.UpdateCheckState
 import net.agolyakov.tetrisclockble.protocol.UpdateInfo
 import net.agolyakov.tetrisclockble.protocol.WifiAuth
@@ -134,6 +135,52 @@ private fun InfoLine(text: String, isError: Boolean = false) {
 private fun formatEpoch(epochSeconds: Long): String =
     DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
         .format(Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()))
+
+// ---------- Device name ----------
+
+@Composable
+fun DeviceNameCard(
+    saved: String,
+    saveFailed: Boolean,
+    actions: NetworkActions
+) {
+    var name by rememberSaveable(saved) { mutableStateOf(saved) }
+    // Empty restores the default "Tetris Clock XXXX"
+    val valid = NetworkCodec.isValidDeviceName(name.trim())
+    val changed = name.trim() != saved
+
+    SettingsCard {
+        CardTitle(Icons.Default.Bluetooth, stringResource(R.string.mc_device_name))
+
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text(stringResource(R.string.mc_device_name_label)) },
+            supportingText = { Text(stringResource(R.string.mc_device_name_limit, name.trim().utf8Length(), NetworkCodec.DEVICE_NAME_MAX_BYTES)) },
+            isError = !valid,
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(8.dp))
+        Hint(stringResource(R.string.mc_device_name_hint))
+
+        if (saveFailed) {
+            Spacer(Modifier.height(8.dp))
+            InfoLine(stringResource(R.string.mc_device_name_save_failed), isError = true)
+        }
+
+        if (changed) {
+            Spacer(Modifier.height(16.dp))
+            CardButtonWide(
+                Icons.Default.Save,
+                stringResource(R.string.mc_wifi_save),
+                { if (valid) actions.saveDeviceName(name) },
+                true
+            )
+        }
+    }
+}
 
 // ---------- WiFi ----------
 

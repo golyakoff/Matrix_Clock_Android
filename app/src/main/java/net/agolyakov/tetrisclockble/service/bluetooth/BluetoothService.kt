@@ -38,6 +38,7 @@ import net.agolyakov.tetrisclockble.protocol.WifiSettings
 import net.agolyakov.tetrisclockble.protocol.WifiSettingsUpdate
 import net.agolyakov.tetrisclockble.protocol.WifiStatus
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_COMMAND_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_DEVICE_NAME_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_OTA_STATUS_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_TIME_ZONE_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_UPDATE_INFO_CHAR_UUID
@@ -222,6 +223,10 @@ class BluetoothService @Inject constructor(
     private val _timeZone = MutableStateFlow<String?>(null)
     val timeZone: StateFlow<String?> = _timeZone.asStateFlow()
 
+    // The clock's BLE name; null when its firmware cannot be renamed
+    private val _deviceName = MutableStateFlow<String?>(null)
+    val deviceName: StateFlow<String?> = _deviceName.asStateFlow()
+
     private val _wifiSettings = MutableStateFlow<WifiSettings?>(null)
     val wifiSettings: StateFlow<WifiSettings?> = _wifiSettings.asStateFlow()
 
@@ -349,6 +354,7 @@ class BluetoothService @Inject constructor(
 
         _networkSupported.value = false
         _timeZone.value = null
+        _deviceName.value = null
         _wifiSettings.value = null
         _wifiStatus.value = null
         _wifiScan.value = null
@@ -615,6 +621,13 @@ class BluetoothService @Inject constructor(
         val supported = bleManager.hasNetworkCharacteristics()
         _networkSupported.value = supported
         if (!supported) return
+        if (bleManager.hasNetworkCharacteristic(MC_DEVICE_NAME_CHAR_UUID)) {
+            try {
+                _deviceName.value = NetworkCodec.decodeDeviceName(bleManager.readNetwork(MC_DEVICE_NAME_CHAR_UUID))
+            } catch (e: Exception) {
+                Log.w(_tag, "Reading the device name failed", e)
+            }
+        }
         try {
             _wifiSettings.value = NetworkCodec.decodeWifiSettings(bleManager.readNetwork(MC_WIFI_SETTINGS_CHAR_UUID))
             _wifiStatus.value = NetworkCodec.decodeWifiStatus(bleManager.readNetwork(MC_WIFI_STATUS_CHAR_UUID))
@@ -678,6 +691,21 @@ class BluetoothService @Inject constructor(
      *
      * @return false if the clock could not be written to (not paired, link lost, invalid values).
      */
+    /**
+     * Renames the clock (an empty name restores its default) and reads the name back. The clock
+     * advertises the new name after this connection ends.
+     *
+     * @return false if the clock could not be written to (link lost, invalid name).
+     */
+    suspend fun saveDeviceName(name: String): Boolean = try {
+        bleManager.writeNetwork(MC_DEVICE_NAME_CHAR_UUID, NetworkCodec.encodeDeviceName(name.trim()))
+        _deviceName.value = NetworkCodec.decodeDeviceName(bleManager.readNetwork(MC_DEVICE_NAME_CHAR_UUID))
+        true
+    } catch (e: Exception) {
+        Log.w(_tag, "Saving the device name failed", e)
+        false
+    }
+
     suspend fun saveWifiSettings(update: WifiSettingsUpdate): Boolean = try {
         bleManager.writeWifiSettings(NetworkCodec.encodeWifiSettings(update))
         _wifiSettings.value = NetworkCodec.decodeWifiSettings(bleManager.readNetwork(MC_WIFI_SETTINGS_CHAR_UUID))

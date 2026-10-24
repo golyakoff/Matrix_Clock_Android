@@ -105,6 +105,11 @@
     <string name="mc_tab_settings">Настройки</string>
     <string name="mc_firmware">Прошивка</string>
     <string name="mc_wifi">WiFi</string>
+    <string name="mc_device_name">Имя часов</string>
+    <string name="mc_device_name_label">Имя в Bluetooth</string>
+    <string name="mc_device_name_limit">%1$d из %2$d байт</string>
+    <string name="mc_device_name_hint">Под этим именем часы видны при поиске и сопряжении. Пустое поле вернёт имя по умолчанию «Tetris Clock XXXX» (XXXX — из MAC-адреса). Новое имя появится в списке после отключения от часов</string>
+    <string name="mc_device_name_save_failed">Не удалось сохранить имя часов</string>
     <string name="mc_wifi_off_hint">Часы полностью работают без WiFi</string>
     <string name="mc_wifi_periodic_hint">Раз в несколько часов часы подключаются к сети, синхронизируют время, проверяют обновление прошивки и отключаются</string>
     <string name="mc_wifi_period">Подключаться каждые</string>

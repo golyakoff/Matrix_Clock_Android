@@ -76,6 +76,14 @@ fun SettingsTab(
     )
 
     // Firmware v2.0.0+ only
+    network.deviceName?.takeIf { network.supported }?.let { saved ->
+        DeviceNameCard(
+            saved = saved,
+            saveFailed = network.deviceNameSaveFailed,
+            actions = networkActions
+        )
+    }
+
     network.wifiSettings?.takeIf { network.supported }?.let { saved ->
         WifiCard(
             saved = saved,

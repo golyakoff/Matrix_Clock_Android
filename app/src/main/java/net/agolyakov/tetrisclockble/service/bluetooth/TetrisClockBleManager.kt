@@ -556,6 +556,9 @@ class TetrisClockBleManager(
     /** Whether the clock has the network characteristics (firmware v2.0.0+). */
     fun hasNetworkCharacteristics(): Boolean = MC_TIME_ZONE_CHAR_UUID in networkCharacteristics
 
+    /** Whether the clock has this one of the optional characteristics in [NETWORK_CHAR_UUIDS]. */
+    fun hasNetworkCharacteristic(uuid: UUID): Boolean = uuid in networkCharacteristics
+
     private fun networkCharacteristic(uuid: UUID): BluetoothGattCharacteristic =
         networkCharacteristics[uuid] ?: throw IllegalStateException("Not connected (no characteristic $uuid)")
 
@@ -687,11 +690,14 @@ class TetrisClockBleManager(
         val MC_UPDATE_INFO_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FC")
         // Progress of an installation from the internet. Mode: Read, Notify
         val MC_OTA_STATUS_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FD")
+        // The clock's BLE name, empty write = the default "Tetris Clock XXXX" (newer than v2.0.0,
+        // optional on its own). Mode: Read, Write
+        val MC_DEVICE_NAME_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FE")
 
         val NETWORK_CHAR_UUIDS = listOf(
             MC_TIME_ZONE_CHAR_UUID, MC_WIFI_SETTINGS_CHAR_UUID, MC_WIFI_STATUS_CHAR_UUID,
             MC_WIFI_NETWORKS_CHAR_UUID, MC_COMMAND_CHAR_UUID, MC_UPDATE_INFO_CHAR_UUID,
-            MC_OTA_STATUS_CHAR_UUID
+            MC_OTA_STATUS_CHAR_UUID, MC_DEVICE_NAME_CHAR_UUID
         )
         val NETWORK_NOTIFYING_CHAR_UUIDS = listOf(
             MC_WIFI_STATUS_CHAR_UUID, MC_WIFI_NETWORKS_CHAR_UUID, MC_UPDATE_INFO_CHAR_UUID,

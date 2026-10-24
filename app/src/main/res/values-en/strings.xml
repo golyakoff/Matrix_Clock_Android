@@ -105,6 +105,11 @@
     <string name="mc_tab_settings">Settings</string>
     <string name="mc_firmware">Firmware</string>
     <string name="mc_wifi">WiFi</string>
+    <string name="mc_device_name">Clock name</string>
+    <string name="mc_device_name_label">Bluetooth name</string>
+    <string name="mc_device_name_limit">%1$d of %2$d bytes</string>
+    <string name="mc_device_name_hint">The clock shows up under this name when scanning and pairing. An empty field restores the default name "Tetris Clock XXXX" (XXXX comes from the MAC address). The new name shows up in the list after disconnecting from the clock</string>
+    <string name="mc_device_name_save_failed">Could not save the clock name</string>
     <string name="mc_wifi_off_hint">The clock works fully without WiFi</string>
     <string name="mc_wifi_periodic_hint">Every few hours the clock connects, syncs its time, checks for a firmware update and disconnects</string>
     <string name="mc_wifi_period">Connect every</string>

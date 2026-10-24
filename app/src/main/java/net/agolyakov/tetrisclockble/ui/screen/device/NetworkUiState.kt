@@ -42,6 +42,9 @@ data class NetworkUiState(
     val updateInfo: UpdateInfo? = null,
     val firmwareCheck: FirmwareCheck = FirmwareCheck.Idle,
     val wifiUpdate: WifiUpdate? = null,
+    /** The name the clock advertises; null for firmware without the device name characteristic. */
+    val deviceName: String? = null,
+    val deviceNameSaveFailed: Boolean = false,
 ) {
     /** The clock can download an update itself: WiFi is on and has a network. */
     val wifiConfigured: Boolean
@@ -50,6 +53,7 @@ data class NetworkUiState(
 
 interface NetworkActions {
     fun saveWifiSettings(update: WifiSettingsUpdate)
+    fun saveDeviceName(name: String)
     fun scanWifi()
     fun syncTimeFromInternet()
     fun checkFirmware()

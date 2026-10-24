@@ -22,6 +22,24 @@ class NetworkCodecTest {
     }
 
     @Test
+    fun deviceName() {
+        assertArrayEquals(hex("4b 69 74 63 68 65 6e"), NetworkCodec.encodeDeviceName("Kitchen"))
+        assertArrayEquals(ByteArray(0), NetworkCodec.encodeDeviceName(""))
+        assertEquals("Часы кухня", NetworkCodec.decodeDeviceName("Часы кухня".toByteArray()))
+        assertTrue(NetworkCodec.isValidDeviceName("N".repeat(20)))
+        assertFalse(NetworkCodec.isValidDeviceName("N".repeat(21)))
+        // 11 Cyrillic letters are 22 bytes
+        assertFalse(NetworkCodec.isValidDeviceName("Ч".repeat(11)))
+        assertFalse(NetworkCodec.isValidDeviceName("Tab\there"))
+        assertFalse(NetworkCodec.isValidDeviceName("Del\u007f"))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun deviceNameTooLong() {
+        NetworkCodec.encodeDeviceName("N".repeat(21))
+    }
+
+    @Test
     fun timeZone() {
         assertArrayEquals("MSK-3".toByteArray(), NetworkCodec.encodeTimeZone("MSK-3"))
         assertEquals("CET-1CEST,M3.5.0,M10.5.0/3", NetworkCodec.decodeTimeZone("CET-1CEST,M3.5.0,M10.5.0/3".toByteArray()))
