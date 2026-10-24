@@ -175,6 +175,11 @@
     <string name="mc_pairing_rejected_hint">Новый телефон можно сопрячь с часами только в течение 2 минут после включения питания или после долгого касания сенсорной панели часов (держите 5 секунд, на часах появится «Bluetooth pairing»). Откройте сопряжение на часах и подключитесь снова.</string>
     <string name="mc_pairing_rejected_forget_hint">Если этот телефон уже был сопряжён с часами раньше, а часы его забыли (их место занял шестой телефон), сначала забудьте старое сопряжение.</string>
     <string name="mc_pairing_retry">Подключиться снова</string>
+    <string name="mc_state_connecting">Подключение…</string>
+    <string name="mc_state_bonding">Сопряжение: подтвердите запрос Android</string>
+    <string name="mc_state_loading">Загрузка…</string>
+    <string name="mc_state_failed">Не удалось подключиться</string>
+    <string name="mc_state_failed_hint">Часы далеко, выключены или к ним уже подключён другой телефон.</string>
     <string name="mc_pairing_forget_and_retry">Забыть сопряжение</string>
     <string name="mc_settings_about">О приложении</string>
     <string name="mc_settings_checking">Проверяю обновления…</string>

@@ -11,6 +11,19 @@ import net.agolyakov.tetrisclockble.protocol.WifiSettings
 import net.agolyakov.tetrisclockble.protocol.WifiState
 import net.agolyakov.tetrisclockble.protocol.WifiStatus
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -23,9 +36,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -111,12 +122,12 @@ fun DeviceScreen(
     }
 
     val connectionState by viewModel.connectionState.collectAsState()
-    (connectionState as? ConnectionState.PairingRejected)?.let { rejected ->
-        PairingRejectedDialog(
-            staleBondRemoved = rejected.staleBondRemoved,
-            onRetry = { viewModel.connectToDevice(device) },
-            onForgetAndRetry = { viewModel.forgetBondAndReconnect(device) }
-        )
+    // Until the clock is first connected (or when it refused this phone) the screen shows only the
+    // connection, not the clock's cards with their empty defaults. Later drops (a WiFi update reboots
+    // the clock) keep the cards: their dialogs follow the reconnect.
+    var everReady by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(connectionState) {
+        if (connectionState == ConnectionState.Ready) everReady = true
     }
 
     LaunchedEffect(bleTime) {
@@ -126,6 +137,20 @@ fun DeviceScreen(
     LaunchedEffect(device) {
         viewModel.connectToDevice(device)
         viewModel.bluetoothService.setShouldMaintainConnection(true)
+    }
+
+    val friendlyName = device?.friendlyName ?: device?.deviceName ?: stringResource(R.string.mc_unnamed_device)
+    val macAddress = device?.macAddress ?: stringResource(R.string.mc_unknown_address)
+    if (connectionState is ConnectionState.PairingRejected ||
+        (connectionState != ConnectionState.Ready && !everReady)) {
+        ConnectionScreen(
+            friendlyName = friendlyName,
+            macAddress = macAddress,
+            state = connectionState,
+            onRetry = { viewModel.connectToDevice(device) },
+            onForgetAndRetry = { viewModel.forgetBondAndReconnect(device) }
+        )
+        return
     }
 
     DeviceSettings(
@@ -207,36 +232,100 @@ enum class DeviceTab(val icon: ImageVector, val labelRes: Int) {
     SETTINGS(Icons.Default.Settings, R.string.mc_tab_settings)
 }
 
-/** The clock (firmware v2.1.0+) did not let this phone in: the pairing window was closed. */
+/**
+ * Between the clock list and the clock's cards: the connection under way, or why there is none (the
+ * clock refused this phone, the connection failed). Modeled on the FireLamp app.
+ */
 @Composable
-private fun PairingRejectedDialog(
-    staleBondRemoved: Boolean,
+private fun ConnectionScreen(
+    friendlyName: String,
+    macAddress: String,
+    state: ConnectionState,
     onRetry: () -> Unit,
     onForgetAndRetry: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = {},
-        title = { Text(stringResource(R.string.mc_pairing_rejected_title)) },
-        text = {
-            Column {
-                Text(stringResource(R.string.mc_pairing_rejected_hint))
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .systemBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        HeaderCard(friendlyName, macAddress)
+        when (state) {
+            is ConnectionState.PairingRejected -> MessageCard(
+                title = stringResource(R.string.mc_pairing_rejected_title),
+                text = stringResource(R.string.mc_pairing_rejected_hint)
+            ) {
+                Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.mc_pairing_retry))
+                }
                 // When the app removed the stale bond itself there is nothing left to forget
-                if (!staleBondRemoved) {
-                    Spacer(Modifier.height(8.dp))
+                if (!state.staleBondRemoved) {
                     Text(
                         text = stringResource(R.string.mc_pairing_rejected_forget_hint),
                         style = MaterialTheme.typography.bodySmall
                     )
+                    OutlinedButton(onClick = onForgetAndRetry, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.mc_pairing_forget_and_retry))
+                    }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onRetry) { Text(stringResource(R.string.mc_pairing_retry)) }
-        },
-        dismissButton = if (staleBondRemoved) null else {
-            { TextButton(onClick = onForgetAndRetry) { Text(stringResource(R.string.mc_pairing_forget_and_retry)) } }
+            is ConnectionState.Error -> MessageCard(
+                title = stringResource(R.string.mc_state_failed),
+                text = stringResource(R.string.mc_state_failed_hint),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Button(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.mc_pairing_retry))
+                }
+            }
+            else -> Row(
+                modifier = Modifier.padding(24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = stringResource(
+                        when (state) {
+                            ConnectionState.Bonding -> R.string.mc_state_bonding
+                            ConnectionState.Connected -> R.string.mc_state_loading
+                            else -> R.string.mc_state_connecting
+                        }
+                    ),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
-    )
+    }
+}
+
+@Composable
+private fun MessageCard(
+    title: String,
+    text: String,
+    containerColor: Color = MaterialTheme.colorScheme.errorContainer,
+    actions: @Composable () -> Unit = {}
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(text, style = MaterialTheme.typography.bodyMedium)
+            actions()
+        }
+    }
 }
 
 @Composable
