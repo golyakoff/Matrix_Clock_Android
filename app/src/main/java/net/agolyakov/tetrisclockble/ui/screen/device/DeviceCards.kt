@@ -99,7 +99,9 @@ fun CardTitle(
         horizontalArrangement = Arrangement.SpaceBetween
     )
     {
+        // Takes what the switch leaves: a long title wraps instead of pushing the switch off the card.
         Row (
+            modifier = Modifier.weight(1f, fill = false),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -121,6 +123,7 @@ fun CardTitle(
 
         if(showSwitch)
         {
+            Spacer(Modifier.width(8.dp))
             Switch(
                 checked = isOn,
                 onCheckedChange = onCheckedChange

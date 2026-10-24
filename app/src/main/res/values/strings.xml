@@ -177,7 +177,7 @@
     <string name="mc_settings_check_failed">Не удалось проверить обновления: %1$s</string>
     <string name="mc_settings_check">Проверить обновления</string>
     <string name="mc_settings_open_release">Открыть страницу версии</string>
-    <string name="mc_settings_beta">Бета-версии приложения</string>
+    <string name="mc_settings_beta">Бета-версии</string>
     <string name="mc_settings_beta_hint">Предлагать и бета-версии приложения: новое появляется раньше, но возможны ошибки. Настройка хранится в телефоне; бета-версии прошивки включаются отдельно, в карточке прошивки часов.</string>
     <string name="mc_settings_language">Язык</string>
 </resources>

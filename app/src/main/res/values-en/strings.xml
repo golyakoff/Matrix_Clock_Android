@@ -177,7 +177,7 @@
     <string name="mc_settings_check_failed">Could not check for updates: %1$s</string>
     <string name="mc_settings_check">Check for updates</string>
     <string name="mc_settings_open_release">Open the version page</string>
-    <string name="mc_settings_beta">App beta versions</string>
+    <string name="mc_settings_beta">Beta versions</string>
     <string name="mc_settings_beta_hint">Offer app beta versions too: new things come sooner, but there may be bugs. Kept on the phone; firmware betas are turned on separately, in the clock\'s firmware card.</string>
     <string name="mc_settings_language">Language</string>
 </resources>
