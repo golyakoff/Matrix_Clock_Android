@@ -60,6 +60,7 @@ import net.agolyakov.tetrisclockble.service.bluetooth.handlers.TurnOnAlarmReadCh
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.VersionReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.FlashSizeReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationCountReadCharacteristicHandler
+import no.nordicsemi.android.ble.observer.BondingObserver
 import no.nordicsemi.android.ble.observer.ConnectionObserver
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -296,10 +297,12 @@ class BluetoothService @Inject constructor(
 
         override fun onDeviceFailedToConnect(device: BluetoothDevice, reason: Int) {
             Log.e(_tag, "Connection failed with status code, $reason")
+            if (pairingRejected(device, reason)) return
             _connectionState.value = ConnectionState.Error("Failed to connect: $reason")
         }
 
         override fun onDeviceDisconnected(device: BluetoothDevice, reason: Int) {
+            if (pairingRejected(device, reason)) return
             _connectionState.value = ConnectionState.Disconnected
             // A drop during an OTA transfer means the clock rebooted mid-update; remember it so the
             // transfer fails instead of silently resuming against a device that left OTA mode.
@@ -311,8 +314,74 @@ class BluetoothService @Inject constructor(
         }
     }
 
+    /** The phone had no bond when this connection attempt started, or bonding started during it. */
+    private var bondedInThisAttempt = false
+
+    private val bondingObserver = object : BondingObserver {
+        override fun onBondingRequired(device: BluetoothDevice) {
+            bondedInThisAttempt = true
+            _connectionState.value = ConnectionState.Bonding
+        }
+
+        override fun onBonded(device: BluetoothDevice) {
+            Log.i(_tag, "Bonded")
+        }
+
+        override fun onBondingFailed(device: BluetoothDevice) {
+            Log.w(_tag, "Bonding failed")
+            if (bleManager.clockRequiresBond) {
+                _connectionState.value = ConnectionState.PairingRejected(staleBondRemoved = false)
+            }
+        }
+    }
+
+    /**
+     * After a lost connection: whether it was the clock (firmware v2.1.0+) not letting this phone in,
+     * in which case the state becomes PairingRejected (no automatic reconnect: the user has to open
+     * the pairing window on the clock first). Ported from the FireLamp app.
+     */
+    private fun pairingRejected(device: BluetoothDevice, reason: Int): Boolean {
+        val state = _connectionState.value
+        if (state is ConnectionState.PairingRejected) return true
+        val inProgress = state is ConnectionState.Connecting || state is ConnectionState.Connected ||
+            state is ConnectionState.Bonding
+        if (!inProgress || !bleManager.clockRequiresBond) return false
+        when {
+            bondedInThisAttempt -> {
+                // A fresh bond and the clock hung up before we were in: it was outside the pairing
+                // window and the clock dropped the keys. The phone's half of the bond is useless.
+                val removed = removeBond(device)
+                Log.w(_tag, "Pairing rejected by the clock (stale bond removed: $removed)")
+                _connectionState.value = ConnectionState.PairingRejected(staleBondRemoved = removed)
+            }
+            reason != ConnectionObserver.REASON_LINK_LOSS && reason != ConnectionObserver.REASON_TIMEOUT &&
+                device.bondState == BluetoothDevice.BOND_BONDED -> {
+                // Bonded, but the clock does not let us in: it forgot this phone (a 6th phone took
+                // its place). Removing the bond is left to the user, it may also be a fluke.
+                Log.w(_tag, "The clock does not accept this phone's bond")
+                _connectionState.value = ConnectionState.PairingRejected(staleBondRemoved = false)
+            }
+            else -> return false
+        }
+        _currentDevice.value = null
+        return true
+    }
+
+    private fun removeBond(device: BluetoothDevice): Boolean = try {
+        device.javaClass.getMethod("removeBond").invoke(device) as Boolean
+    } catch (e: Exception) {
+        Log.w(_tag, "removeBond failed", e)
+        false
+    }
+
+    /** The clock forgot this phone: drop the phone's half of the bond (asynchronous in Android). */
+    fun forgetBond(macAddress: String) {
+        removeBond(bluetoothAdapterProvider.getAdapter().getRemoteDevice(macAddress))
+    }
+
     init {
         bleManager.connectionObserver = connectionObserver
+        bleManager.setBondingObserver(bondingObserver)
         bleManager.onNetworkNotification = ::onNetworkNotification
     }
 
@@ -388,6 +457,7 @@ class BluetoothService @Inject constructor(
 
         _connectionState.value = ConnectionState.Connecting
         val device = bluetoothAdapterProvider.getAdapter().getRemoteDevice(tetrisClockDevice.macAddress)
+        bondedInThisAttempt = device.bondState != BluetoothDevice.BOND_BONDED
         bleManager.connect(device)
             .retry(2, 100)
             .useAutoConnect(useAutoConnect)

@@ -316,7 +316,19 @@ class DeviceViewModel @Inject constructor(
         else -> R.string.mc_fw_error_download
     }
 
+    /** The clock forgot this phone: drop the phone's half of the bond and pair anew. */
+    fun forgetBondAndReconnect(device: TetrisClockDevice?) {
+        device ?: return
+        bluetoothService.forgetBond(device.macAddress)
+        viewModelScope.launch {
+            // Removing a bond is asynchronous in Android
+            kotlinx.coroutines.delay(BOND_REMOVAL_DELAY_MS)
+            bluetoothService.connect(device)
+        }
+    }
+
     companion object {
+        private const val BOND_REMOVAL_DELAY_MS = 1000L
         private const val UNKNOWN_VERSION = "Unknown"
         private const val WIFI_UPDATE_TIMEOUT_MS = 10 * 60 * 1000L
         private const val WIFI_UPDATE_REBOOT_TIMEOUT_MS = 90 * 1000L

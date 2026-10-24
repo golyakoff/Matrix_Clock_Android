@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,7 +23,9 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -30,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -102,6 +107,15 @@ fun DeviceScreen(
                 )
                 viewModel.hideTimePickerDialog()
             }
+        )
+    }
+
+    val connectionState by viewModel.connectionState.collectAsState()
+    (connectionState as? ConnectionState.PairingRejected)?.let { rejected ->
+        PairingRejectedDialog(
+            staleBondRemoved = rejected.staleBondRemoved,
+            onRetry = { viewModel.connectToDevice(device) },
+            onForgetAndRetry = { viewModel.forgetBondAndReconnect(device) }
         )
     }
 
@@ -191,6 +205,38 @@ fun DeviceScreen(
 enum class DeviceTab(val icon: ImageVector, val labelRes: Int) {
     CLOCK(Icons.Default.Schedule, R.string.mc_tab_clock),
     SETTINGS(Icons.Default.Settings, R.string.mc_tab_settings)
+}
+
+/** The clock (firmware v2.1.0+) did not let this phone in: the pairing window was closed. */
+@Composable
+private fun PairingRejectedDialog(
+    staleBondRemoved: Boolean,
+    onRetry: () -> Unit,
+    onForgetAndRetry: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text(stringResource(R.string.mc_pairing_rejected_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.mc_pairing_rejected_hint))
+                // When the app removed the stale bond itself there is nothing left to forget
+                if (!staleBondRemoved) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.mc_pairing_rejected_forget_hint),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.mc_pairing_retry)) }
+        },
+        dismissButton = if (staleBondRemoved) null else {
+            { TextButton(onClick = onForgetAndRetry) { Text(stringResource(R.string.mc_pairing_forget_and_retry)) } }
+        }
+    )
 }
 
 @Composable

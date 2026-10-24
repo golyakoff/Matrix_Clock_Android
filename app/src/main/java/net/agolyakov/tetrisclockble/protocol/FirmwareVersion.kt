@@ -21,6 +21,13 @@ object FirmwareVersion {
     /** Whether [version] is a beta (vX.Y.Z-betaN). */
     fun isBeta(version: String): Boolean = parse(version)?.let { it[3] != RELEASE } ?: false
 
+    /** The first firmware that lets only bonded phones in (all but the version need pairing). */
+    private const val FIRST_BONDING = "v2.1.0-beta1"
+
+    /** Whether a clock running [version] needs the phone to bond before anything but the version is read. */
+    fun requiresBond(version: String): Boolean =
+        parse(version)?.let { compare(it, parse(FIRST_BONDING)) >= 0 } ?: false
+
     /** Orders versions; invalid ones come first. */
     val comparator: Comparator<String> = Comparator { a, b -> compare(parse(a), parse(b)) }
 

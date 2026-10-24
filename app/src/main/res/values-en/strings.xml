@@ -171,6 +171,11 @@
     <string name="mc_fw_error_not_sent">Could not send the command to the clock</string>
     <string name="mc_dialog_close">Close</string>
     <string name="mc_settings">Settings</string>
+    <string name="mc_pairing_rejected_title">The clock did not accept this phone</string>
+    <string name="mc_pairing_rejected_hint">A new phone can pair with the clock only within 2 minutes after it is powered on, or after a long touch of the clock\'s touch pad (hold it for 5 seconds, the clock shows "Bluetooth pairing"). Open pairing on the clock and connect again.</string>
+    <string name="mc_pairing_rejected_forget_hint">If this phone was paired with the clock before and the clock forgot it (a sixth phone took its place), forget the old pairing first.</string>
+    <string name="mc_pairing_retry">Connect again</string>
+    <string name="mc_pairing_forget_and_retry">Forget pairing</string>
     <string name="mc_settings_about">About</string>
     <string name="mc_settings_checking">Checking for updates…</string>
     <string name="mc_settings_up_to_date">You have the latest version</string>

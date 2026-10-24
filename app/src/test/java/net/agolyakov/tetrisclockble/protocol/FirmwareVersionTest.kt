@@ -51,6 +51,16 @@ class FirmwareVersionTest {
     }
 
     @Test
+    fun bond() {
+        assertTrue(FirmwareVersion.requiresBond("v2.1.0-beta1"))
+        assertTrue(FirmwareVersion.requiresBond("v2.1.0"))
+        assertTrue(FirmwareVersion.requiresBond("v3.0.0"))
+        assertFalse(FirmwareVersion.requiresBond("v2.0.1"))
+        assertFalse(FirmwareVersion.requiresBond("v1.8.0"))
+        assertFalse(FirmwareVersion.requiresBond("Unknown"))
+    }
+
+    @Test
     fun order() {
         val sorted = listOf("v2.1.0", "ota-test", "v2.1.0-beta2", "v1.8.1", "v2.1.0-beta1")
             .sortedWith(FirmwareVersion.comparator)

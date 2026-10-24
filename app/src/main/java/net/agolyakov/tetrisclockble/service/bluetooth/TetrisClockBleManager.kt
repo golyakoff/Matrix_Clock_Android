@@ -12,6 +12,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockHourlyBrightness
+import net.agolyakov.tetrisclockble.protocol.FirmwareVersion
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AgingOffsetReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AutoBrightnessReadCharacteristicHandler
 import net.agolyakov.tetrisclockble.service.bluetooth.handlers.AnimationSplashReadCharacteristicHandler
@@ -154,9 +155,30 @@ class TetrisClockBleManager(
             _hasRefreshedGattCache = true
             refreshDeviceCache().enqueue()
         }
-        setupNotifications()
         setupMtu()
+        clockRequiresBond = false
+        // Firmware v2.1.0+ lets only bonded phones in: everything but the version needs an encrypted
+        // link. The (open) version is read first and the phone bonds before the notifications are
+        // enabled; without the bond the first access would fail with Insufficient Encryption and
+        // Android would start pairing by itself, an explicit bond is easier to follow (and to fail
+        // clearly). createBondInsecure completes at once when the phone is already bonded.
+        readCharacteristic(mcVersionCharacteristic)
+            .with { _, data ->
+                val version = data.value?.toString(Charsets.US_ASCII) ?: ""
+                clockRequiresBond = FirmwareVersion.requiresBond(version)
+                if (clockRequiresBond && bluetoothDevice?.bondState != BluetoothDevice.BOND_BONDED) {
+                    createBondInsecure().enqueue()
+                }
+                setupNotifications()
+            }
+            .fail { _, _ -> setupNotifications() }
+            .enqueue()
     }
+
+    /** The connected clock lets only bonded phones in (known once the version is read on connect). */
+    @Volatile
+    var clockRequiresBond = false
+        private set
 
     /**
      * Negotiated ATT MTU (suspends until the MTU exchange completes after connect).
