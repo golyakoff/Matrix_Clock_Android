@@ -39,6 +39,13 @@ object NetworkCodec {
 
     fun decodeDeviceName(bytes: ByteArray): String = ByteReader(bytes).restAsString()
 
+    // ---------- Update channel ----------
+
+    /** true: the clock is also offered betas (vX.Y.Z-betaN), false: releases only. */
+    fun encodeBetaUpdates(beta: Boolean): ByteArray = byteArrayOf(if (beta) 1 else 0)
+
+    fun decodeBetaUpdates(bytes: ByteArray): Boolean = bytes.firstOrNull()?.toInt() == 1
+
     // ---------- WiFi settings ----------
 
     fun decodeWifiSettings(bytes: ByteArray): WifiSettings = with(ByteReader(bytes)) {

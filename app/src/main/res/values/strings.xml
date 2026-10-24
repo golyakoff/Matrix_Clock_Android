@@ -151,6 +151,8 @@
     <string name="mc_fw_hint_both">С телефона обновление идёт по Bluetooth и занимает несколько минут; по WiFi часы скачивают его сами и закончат, даже если телефон уйдёт.</string>
     <string name="mc_fw_hint_phone_only">Обновление идёт по Bluetooth и занимает несколько минут. Настройте WiFi, чтобы часы могли обновляться сами.</string>
     <string name="mc_fw_clock_found">Часы нашли версию %1$s</string>
+    <string name="mc_fw_beta">Бета-версии</string>
+    <string name="mc_fw_beta_hint">Предлагать и бета-версии прошивки: новое появляется раньше, но возможны ошибки. Настройка хранится в часах.</string>
     <string name="mc_fw_clock_up_to_date">Часы проверили: обновлений нет</string>
     <string name="mc_fw_clock_checking">Часы проверяют…</string>
     <string name="mc_fw_clock_check_failed">Часам не удалось проверить обновления</string>

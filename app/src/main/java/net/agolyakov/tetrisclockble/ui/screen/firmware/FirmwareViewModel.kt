@@ -28,11 +28,12 @@ class FirmwareViewModel @Inject constructor(
         checkForUpdates()
     }
 
-    fun checkForUpdates(includePreReleases: Boolean = false) {
+    // Releases only, or betas too: as the clock's update channel says (FirmwareRepository)
+    fun checkForUpdates() {
         viewModelScope.launch {
             _uiState.value = FirmwareRepository.UpdateState.Checking
             try {
-                val state = firmwareRepository.checkForUpdates(includePreReleases)
+                val state = firmwareRepository.checkForUpdates()
                 _uiState.value = state
             } catch (e: Exception) {
                 _uiState.value = FirmwareRepository.UpdateState.Error(e.message ?: "Check failed")
@@ -62,13 +63,13 @@ class FirmwareViewModel @Inject constructor(
         }
     }
 
-    fun performCompleteUpdate(includePreReleases: Boolean = false) {
+    fun performCompleteUpdate() {
         viewModelScope.launch {
             _uiState.value = FirmwareRepository.UpdateState.Processing
             _progress.value = 0f
             _statusMessage.value = "Starting update..."
 
-            val result = firmwareRepository.performCompleteUpdate(includePreReleases) { progress, message ->
+            val result = firmwareRepository.performCompleteUpdate { progress, message ->
                 _progress.value = progress
                 _statusMessage.value = message
             }

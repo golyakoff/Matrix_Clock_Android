@@ -728,11 +728,14 @@ class TetrisClockBleManager(
         // The clock's BLE name, empty write = the default "Tetris Clock XXXX" (newer than v2.0.0,
         // optional on its own). Mode: Read, Write
         val MC_DEVICE_NAME_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FE")
+        // Update channel, u8 0 = releases, 1 = also betas (newer than v2.0.0, optional on its own).
+        // Mode: Read, Write
+        val MC_UPDATE_CHANNEL_CHAR_UUID: UUID = UUID.fromString("C9F0E1D2-3B4A-5C6D-7E8F-A0B1C2D3E4FF")
 
         val NETWORK_CHAR_UUIDS = listOf(
             MC_TIME_ZONE_CHAR_UUID, MC_WIFI_SETTINGS_CHAR_UUID, MC_WIFI_STATUS_CHAR_UUID,
             MC_WIFI_NETWORKS_CHAR_UUID, MC_COMMAND_CHAR_UUID, MC_UPDATE_INFO_CHAR_UUID,
-            MC_OTA_STATUS_CHAR_UUID, MC_DEVICE_NAME_CHAR_UUID
+            MC_OTA_STATUS_CHAR_UUID, MC_DEVICE_NAME_CHAR_UUID, MC_UPDATE_CHANNEL_CHAR_UUID
         )
         val NETWORK_NOTIFYING_CHAR_UUIDS = listOf(
             MC_WIFI_STATUS_CHAR_UUID, MC_WIFI_NETWORKS_CHAR_UUID, MC_UPDATE_INFO_CHAR_UUID,

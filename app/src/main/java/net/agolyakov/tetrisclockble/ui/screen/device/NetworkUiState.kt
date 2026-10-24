@@ -47,6 +47,8 @@ data class NetworkUiState(
     /** The name the clock advertises; null for firmware without the device name characteristic. */
     val deviceName: String? = null,
     val deviceNameSaveFailed: Boolean = false,
+    /** Whether the clock is on the beta update channel; null for firmware without channels. */
+    val betaUpdates: Boolean? = null,
 ) {
     /** The clock can download an update itself: WiFi is on and has a network. */
     val wifiConfigured: Boolean
@@ -56,6 +58,7 @@ data class NetworkUiState(
 interface NetworkActions {
     fun saveWifiSettings(update: WifiSettingsUpdate)
     fun saveDeviceName(name: String)
+    fun setBetaUpdates(beta: Boolean)
     fun scanWifi()
     fun syncTimeFromInternet()
     fun checkFirmware()

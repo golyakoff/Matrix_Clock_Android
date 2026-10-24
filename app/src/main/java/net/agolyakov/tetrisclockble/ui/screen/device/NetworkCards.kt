@@ -48,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -538,7 +539,7 @@ fun FirmwareCard(
     val clockCanUpdate = network.supported && network.wifiConfigured
     val phoneFound = network.firmwareCheck is FirmwareCheck.Available
     // The clock checks its own manifest: it may find an update the phone doesn't offer (its build
-    // is not in the latest release, a debug build on the test channel)
+    // is not in the latest release, a debug build)
     val clockFound = clockCanUpdate && network.updateInfo?.state == UpdateCheckState.AVAILABLE
 
     SettingsCard {
@@ -558,6 +559,22 @@ fun FirmwareCard(
         }
         if (network.supported) {
             network.updateInfo?.let { ClockCheckLine(it) }
+        }
+
+        network.betaUpdates?.takeIf { network.supported }?.let { beta ->
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    modifier = Modifier.weight(1f),
+                    text = stringResource(R.string.mc_fw_beta),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Switch(checked = beta, onCheckedChange = actions::setBetaUpdates)
+            }
+            Hint(stringResource(R.string.mc_fw_beta_hint))
         }
 
         Spacer(Modifier.height(16.dp))

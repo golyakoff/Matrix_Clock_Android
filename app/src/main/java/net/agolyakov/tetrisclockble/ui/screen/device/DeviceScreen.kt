@@ -326,6 +326,7 @@ fun DeviceSettings(
 private object NoNetworkActions : NetworkActions {
     override fun saveWifiSettings(update: WifiSettingsUpdate) {}
     override fun saveDeviceName(name: String) {}
+    override fun setBetaUpdates(beta: Boolean) {}
     override fun scanWifi() {}
     override fun syncTimeFromInternet() {}
     override fun checkFirmware() {}

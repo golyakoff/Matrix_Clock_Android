@@ -41,6 +41,7 @@ import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Comp
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_DEVICE_NAME_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_OTA_STATUS_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_TIME_ZONE_CHAR_UUID
+import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_UPDATE_CHANNEL_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_UPDATE_INFO_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_WIFI_NETWORKS_CHAR_UUID
 import net.agolyakov.tetrisclockble.service.bluetooth.TetrisClockBleManager.Companion.MC_WIFI_SETTINGS_CHAR_UUID
@@ -227,6 +228,10 @@ class BluetoothService @Inject constructor(
     private val _deviceName = MutableStateFlow<String?>(null)
     val deviceName: StateFlow<String?> = _deviceName.asStateFlow()
 
+    // Whether the clock is on the beta update channel; null when its firmware has no channels
+    private val _betaUpdates = MutableStateFlow<Boolean?>(null)
+    val betaUpdates: StateFlow<Boolean?> = _betaUpdates.asStateFlow()
+
     private val _wifiSettings = MutableStateFlow<WifiSettings?>(null)
     val wifiSettings: StateFlow<WifiSettings?> = _wifiSettings.asStateFlow()
 
@@ -355,6 +360,7 @@ class BluetoothService @Inject constructor(
         _networkSupported.value = false
         _timeZone.value = null
         _deviceName.value = null
+        _betaUpdates.value = null
         _wifiSettings.value = null
         _wifiStatus.value = null
         _wifiScan.value = null
@@ -628,6 +634,13 @@ class BluetoothService @Inject constructor(
                 Log.w(_tag, "Reading the device name failed", e)
             }
         }
+        if (bleManager.hasNetworkCharacteristic(MC_UPDATE_CHANNEL_CHAR_UUID)) {
+            try {
+                _betaUpdates.value = NetworkCodec.decodeBetaUpdates(bleManager.readNetwork(MC_UPDATE_CHANNEL_CHAR_UUID))
+            } catch (e: Exception) {
+                Log.w(_tag, "Reading the update channel failed", e)
+            }
+        }
         try {
             _wifiSettings.value = NetworkCodec.decodeWifiSettings(bleManager.readNetwork(MC_WIFI_SETTINGS_CHAR_UUID))
             _wifiStatus.value = NetworkCodec.decodeWifiStatus(bleManager.readNetwork(MC_WIFI_STATUS_CHAR_UUID))
@@ -706,6 +719,21 @@ class BluetoothService @Inject constructor(
      *
      * @return false if the clock could not be written to (not paired, link lost, invalid values).
      */
+    /**
+     * Puts the clock on the beta update channel or back on releases only, and reads it back. Both
+     * the clock's own update check and the phone's one (for the BLE update) follow it.
+     *
+     * @return false if the clock could not be written to.
+     */
+    suspend fun saveBetaUpdates(beta: Boolean): Boolean = try {
+        bleManager.writeNetwork(MC_UPDATE_CHANNEL_CHAR_UUID, NetworkCodec.encodeBetaUpdates(beta))
+        _betaUpdates.value = NetworkCodec.decodeBetaUpdates(bleManager.readNetwork(MC_UPDATE_CHANNEL_CHAR_UUID))
+        true
+    } catch (e: Exception) {
+        Log.w(_tag, "Saving the update channel failed", e)
+        false
+    }
+
     suspend fun saveWifiSettings(update: WifiSettingsUpdate): Boolean = try {
         bleManager.writeWifiSettings(NetworkCodec.encodeWifiSettings(update))
         _wifiSettings.value = NetworkCodec.decodeWifiSettings(bleManager.readNetwork(MC_WIFI_SETTINGS_CHAR_UUID))

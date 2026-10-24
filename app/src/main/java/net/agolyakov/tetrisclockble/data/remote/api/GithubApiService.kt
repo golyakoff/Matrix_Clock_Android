@@ -5,6 +5,7 @@ import okhttp3.ResponseBody
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
+import retrofit2.http.Query
 import retrofit2.http.Streaming
 
 interface GithubApiService {
@@ -20,6 +21,7 @@ interface GithubApiService {
     suspend fun getAllReleases(
         @Path("owner") owner: String,
         @Path("repo") repo: String,
+        @Query("per_page") perPage: Int = 100,
         @Header("Accept") accept: String  = "application/vnd.github.v3+json",
     ): List<GithubRelease>
 

@@ -58,7 +58,10 @@ class FirmwareRepository @Inject constructor(
         return bluetoothService.getCurrentVersion()
     }
 
-    suspend fun checkForUpdates(includePreReleases: Boolean = false): UpdateState {
+    /** Betas too when the clock is on the beta update channel. */
+    private fun clockTakesBetas(): Boolean = bluetoothService.betaUpdates.value == true
+
+    suspend fun checkForUpdates(includePreReleases: Boolean = clockTakesBetas()): UpdateState {
         val currentVersion = getCurrentVersion()
         val latestRelease = githubRepository.getLatestRelease(includePreReleases)
         return if (isNewVersionAvailable(currentVersion, latestRelease.tagName)) {
@@ -105,7 +108,7 @@ class FirmwareRepository @Inject constructor(
     }
 
     suspend fun performCompleteUpdate(
-        includePreReleases: Boolean = false,
+        includePreReleases: Boolean = clockTakesBetas(),
         onProgress: (Float, String) -> Unit
     ): UpdateResult = withContext(Dispatchers.IO) {
         try {

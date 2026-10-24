@@ -151,6 +151,8 @@
     <string name="mc_fw_hint_both">From the phone the update goes over Bluetooth and takes a few minutes; over WiFi the clock downloads it by itself and finishes even if the phone goes away.</string>
     <string name="mc_fw_hint_phone_only">The update goes over Bluetooth and takes a few minutes. Set up WiFi so that the clock can update by itself.</string>
     <string name="mc_fw_clock_found">The clock found version %1$s</string>
+    <string name="mc_fw_beta">Beta versions</string>
+    <string name="mc_fw_beta_hint">Also offer beta firmware: new things come earlier, but may have bugs. The setting is kept in the clock.</string>
     <string name="mc_fw_clock_up_to_date">The clock checked: no updates</string>
     <string name="mc_fw_clock_checking">The clock is checking…</string>
     <string name="mc_fw_clock_check_failed">The clock could not check for updates</string>

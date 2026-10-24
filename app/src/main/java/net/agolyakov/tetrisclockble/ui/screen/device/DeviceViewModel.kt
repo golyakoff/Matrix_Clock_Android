@@ -168,8 +168,8 @@ class DeviceViewModel @Inject constructor(
         combine(_wifiSaveFailed, _wifiSaving, _deviceNameSaveFailed, ::Triple),
         bluetoothService.updateInfo,
         _firmwareCheck,
-        combine(_wifiUpdate, bluetoothService.deviceName, ::Pair),
-    ) { state, (saveFailed, saving, nameSaveFailed), updateInfo, firmwareCheck, (wifiUpdate, deviceName) ->
+        combine(_wifiUpdate, bluetoothService.deviceName, bluetoothService.betaUpdates, ::Triple),
+    ) { state, (saveFailed, saving, nameSaveFailed), updateInfo, firmwareCheck, (wifiUpdate, deviceName, betaUpdates) ->
         state.copy(
             wifiSaveFailed = saveFailed,
             wifiSaving = saving,
@@ -177,7 +177,8 @@ class DeviceViewModel @Inject constructor(
             firmwareCheck = firmwareCheck,
             wifiUpdate = wifiUpdate,
             deviceName = deviceName,
-            deviceNameSaveFailed = nameSaveFailed
+            deviceNameSaveFailed = nameSaveFailed,
+            betaUpdates = betaUpdates
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NetworkUiState())
 
@@ -222,6 +223,13 @@ class DeviceViewModel @Inject constructor(
      * The Check button: the phone checks the GitHub releases, and a clock with WiFi checks its own
      * manifest too (the clock knows its build, and a debug build reads the test channel).
      */
+    // The channel changes what both the clock and the phone offer: check again right away
+    override fun setBetaUpdates(beta: Boolean) {
+        viewModelScope.launch {
+            if (bluetoothService.saveBetaUpdates(beta)) checkFirmware()
+        }
+    }
+
     override fun checkFirmware() {
         val settings = bluetoothService.wifiSettings.value
         if (bluetoothService.networkSupported.value && settings != null &&

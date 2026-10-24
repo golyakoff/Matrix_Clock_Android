@@ -5,6 +5,7 @@ import kotlinx.coroutines.withContext
 import net.agolyakov.tetrisclockble.data.model.github.GithubAsset
 import net.agolyakov.tetrisclockble.data.model.github.GithubRelease
 import net.agolyakov.tetrisclockble.data.remote.api.GithubApiService
+import net.agolyakov.tetrisclockble.protocol.FirmwareVersion
 import okhttp3.ResponseBody
 import retrofit2.http.Streaming
 import java.io.IOException
@@ -42,11 +43,20 @@ class GithubRepository @Inject constructor(
         return pattern.find(url)?.groupValues?.get(1)
     }
 
+    /**
+     * The latest release, or with [includePreReleases] the highest version among the releases and
+     * the betas (vX.Y.Z-betaN): a beta is offered until its release is out. Other pre-releases (the
+     * "beta" channel pointer, test ones) have no version tag and are skipped.
+     */
     suspend fun getLatestRelease(includePreReleases: Boolean): GithubRelease {
         return withContext(Dispatchers.IO) {
             if (includePreReleases) {
                 githubApiService.getAllReleases(owner, repo)
-                    .firstOrNull()
+                    .filter { r ->
+                        !r.draft && FirmwareVersion.parse(r.tagName) != null &&
+                            (!r.prerelease || FirmwareVersion.isBeta(r.tagName))
+                    }
+                    .maxWithOrNull(compareBy(FirmwareVersion.comparator) { it.tagName })
                     ?: throw IOException("No releases found")
             } else {
                 githubApiService.getLatestRelease(owner, repo)

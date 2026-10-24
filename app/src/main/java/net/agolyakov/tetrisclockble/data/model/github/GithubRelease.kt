@@ -15,6 +15,9 @@ data class GithubRelease(
     @SerializedName("prerelease")
     val prerelease: Boolean = false,
 
+    @SerializedName("draft")
+    val draft: Boolean = false,
+
     @SerializedName("assets")
     val assets: List<GithubAsset> = emptyList(),
 
