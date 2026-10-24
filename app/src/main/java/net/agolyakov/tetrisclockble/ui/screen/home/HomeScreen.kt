@@ -1,17 +1,11 @@
 package net.agolyakov.tetrisclockble.ui.screen.home
 
-import android.app.Activity
-import android.app.LocaleManager
-import android.os.Build
-import android.os.LocaleList
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.SystemUpdate
@@ -20,7 +14,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -28,10 +21,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
-import androidx.core.os.LocaleListCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import net.agolyakov.tetrisclockble.BuildConfig
 import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.data.repository.AppUpdateRepository
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
@@ -66,10 +57,10 @@ fun HomeScreen(
             }
         )
 
-        AppVersionPlaque(
-            appVersion = BuildConfig.VERSION_NAME,
-            updateState = appUpdateState
-        )
+        // The rest (version, betas, language) is on the settings screen behind the header's gear.
+        (appUpdateState as? AppUpdateRepository.UpdateCheckState.UpdateAvailable)?.let {
+            AppUpdatePlaque(it)
+        }
     }
 
     if (showRenameDialog && deviceToRename != null) {
@@ -83,55 +74,6 @@ fun HomeScreen(
                 homeViewModel.renameDevice(deviceToRename!!.macAddress, newName)
             }
         )
-    }
-}
-
-@Composable
-fun LanguageToggle() {
-    val context = LocalContext.current
-
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = stringResource(R.string.mc_language_label),
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(Modifier.width(4.dp))
-
-        // Language names are endonyms and stay untranslated regardless of the active locale.
-        Text(
-            text = "English",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable { setAppLocale(context, "en") }
-        )
-
-        Text(
-            text = " | ",
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Text(
-            text = "Русский",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.clickable { setAppLocale(context, "ru") }
-        )
-    }
-}
-
-private fun setAppLocale(context: android.content.Context, languageTag: String) {
-    // AppCompatDelegate.setApplicationLocales() relies on an active AppCompatDelegate
-    // instance to resolve the app context, which this app never creates since
-    // MainActivity is a plain ComponentActivity. Call the framework LocaleManager
-    // directly on API 33+ (where it's guaranteed to exist) and fall back to the
-    // AppCompat shim + manual recreate() below that.
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        context.getSystemService(LocaleManager::class.java).applicationLocales =
-            LocaleList.forLanguageTags(languageTag)
-    } else {
-        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(languageTag))
-        (context as? Activity)?.recreate()
     }
 }
 
@@ -171,10 +113,9 @@ fun DeviceList(
 }
 
 @Composable
-fun AppVersionPlaque(
-    appVersion: String,
-    modifier: Modifier = Modifier,
-    updateState: AppUpdateRepository.UpdateCheckState = AppUpdateRepository.UpdateCheckState.UpToDate
+fun AppUpdatePlaque(
+    update: AppUpdateRepository.UpdateCheckState.UpdateAvailable,
+    modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
 
@@ -187,68 +128,32 @@ fun AppVersionPlaque(
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.size(24.dp)
-                )
-
-                Spacer(Modifier.width(12.dp))
-
-                Text(
-                    text = stringResource(R.string.mc_app_version, appVersion),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 52.dp, end = 16.dp, bottom = 12.dp)
-            ) {
-                LanguageToggle()
-            }
-
-            if (updateState is AppUpdateRepository.UpdateCheckState.UpdateAvailable) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            val url = updateState.release.htmlUrl
-                            if (!url.isNullOrBlank()) {
-                                uriHandler.openUri(url)
-                            }
-                        }
-                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.SystemUpdate,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Text(
-                        text = stringResource(
-                            R.string.mc_app_update_available,
-                            updateState.release.tagName
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    val url = update.release.htmlUrl
+                    if (!url.isNullOrBlank()) {
+                        uriHandler.openUri(url)
+                    }
                 }
-            }
+                .padding(vertical = 12.dp, horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.SystemUpdate,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = stringResource(R.string.mc_app_update_available, update.release.tagName),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }

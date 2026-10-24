@@ -12,9 +12,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockDevice
@@ -35,9 +33,7 @@ class HomeViewModel @Inject constructor(
     private val appUpdateRepository: AppUpdateRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
-    private val _appUpdateState =
-        MutableStateFlow<AppUpdateRepository.UpdateCheckState>(AppUpdateRepository.UpdateCheckState.UpToDate)
-    val appUpdateState: StateFlow<AppUpdateRepository.UpdateCheckState> = _appUpdateState.asStateFlow()
+    val appUpdateState: StateFlow<AppUpdateRepository.UpdateCheckState> = appUpdateRepository.state
 
     private val foundDevices = HashMap<String, TetrisClockDevice>()
     private val _devices: MutableLiveData<List<TetrisClockDevice>> = MutableLiveData()
@@ -60,7 +56,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _appUpdateState.value = appUpdateRepository.checkForUpdate()
+            appUpdateRepository.checkForUpdate()
         }
     }
 

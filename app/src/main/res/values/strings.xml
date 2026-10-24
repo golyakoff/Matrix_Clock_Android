@@ -1,6 +1,5 @@
 <resources>
     <string name="app_name">Часы-тетрис</string>
-    <string name="app_full_name">Часы-тетрис | Bluetooth LE клиент</string>
     <string name="mc_manual_turn_on_clock">Включить часы</string>
     <string name="mc_manual_turn_off_clock">Выключить часы</string>
     <string name="mc_matrix_power">Табло Вкл/Выкл</string>
@@ -171,4 +170,14 @@
     <string name="mc_fw_error_not_verified">Часы не вернулись после перезагрузки; подключитесь снова, чтобы проверить версию</string>
     <string name="mc_fw_error_not_sent">Не удалось отправить команду часам</string>
     <string name="mc_dialog_close">Закрыть</string>
+    <string name="mc_settings">Настройки</string>
+    <string name="mc_settings_about">О приложении</string>
+    <string name="mc_settings_checking">Проверяю обновления…</string>
+    <string name="mc_settings_up_to_date">Установлена последняя версия</string>
+    <string name="mc_settings_check_failed">Не удалось проверить обновления: %1$s</string>
+    <string name="mc_settings_check">Проверить обновления</string>
+    <string name="mc_settings_open_release">Открыть страницу версии</string>
+    <string name="mc_settings_beta">Бета-версии приложения</string>
+    <string name="mc_settings_beta_hint">Предлагать и бета-версии приложения: новое появляется раньше, но возможны ошибки. Настройка хранится в телефоне; бета-версии прошивки включаются отдельно, в карточке прошивки часов.</string>
+    <string name="mc_settings_language">Язык</string>
 </resources>

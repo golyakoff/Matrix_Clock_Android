@@ -13,6 +13,7 @@ import net.agolyakov.tetrisclockble.ui.screen.device.DeviceViewModel
 import net.agolyakov.tetrisclockble.ui.screen.firmware.FirmwareScreen
 import net.agolyakov.tetrisclockble.ui.screen.home.HomeScreen
 import net.agolyakov.tetrisclockble.ui.screen.home.HomeViewModel
+import net.agolyakov.tetrisclockble.ui.screen.settings.SettingsScreen
 
 @Composable
 fun SetupNavGraph(
@@ -45,6 +46,10 @@ fun SetupNavGraph(
             FirmwareScreen(
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(route = Screen.Settings.route) {
+            SettingsScreen()
         }
     }
 }
