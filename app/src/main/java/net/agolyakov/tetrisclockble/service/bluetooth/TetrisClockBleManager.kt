@@ -7,6 +7,7 @@ import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockAlarm
 import net.agolyakov.tetrisclockble.data.model.ble.TetrisClockTime
@@ -580,10 +581,44 @@ class TetrisClockBleManager(
         if (bluetoothDevice?.bondState != BluetoothDevice.BOND_BONDED) {
             createBondInsecure().suspend()
         }
+        repeat(WIFI_WRITE_ATTEMPTS - 1) { attempt ->
+            try {
+                writeNetwork(MC_WIFI_SETTINGS_CHAR_UUID, value)
+                return
+            } catch (e: Exception) {
+                Log.w(_tag, "WiFi settings write ${attempt + 1} failed, retrying", e)
+            }
+            awaitPairingAndServices()
+        }
         writeNetwork(MC_WIFI_SETTINGS_CHAR_UUID, value)
     }
 
+    /**
+     * After a failed WiFi settings write: waits for what follows a (new) bond. If the phone kept a
+     * bond the clock no longer has, Android pairs again by itself after the failed write. After
+     * bonding Android discovers the services again: the library drops the characteristics and the
+     * pending requests (the write fails) and initializes the connection anew.
+     */
+    private suspend fun awaitPairingAndServices() {
+        val device = bluetoothDevice ?: return
+        withTimeoutOrNull(REBOND_START_TIMEOUT_MS) {
+            while (device.bondState != BluetoothDevice.BOND_BONDING) delay(100)
+        }
+        // The user answers the pairing prompt
+        withTimeoutOrNull(REBOND_TIMEOUT_MS) {
+            while (device.bondState == BluetoothDevice.BOND_BONDING) delay(250)
+        }
+        withTimeoutOrNull(SERVICES_TIMEOUT_MS) {
+            while (!isReady || MC_WIFI_SETTINGS_CHAR_UUID !in networkCharacteristics) delay(100)
+        }
+    }
+
     companion object {
+        private const val WIFI_WRITE_ATTEMPTS = 3
+        private const val REBOND_START_TIMEOUT_MS = 3_000L
+        private const val REBOND_TIMEOUT_MS = 60_000L
+        private const val SERVICES_TIMEOUT_MS = 15_000L
+
         // Matrix Clock Service
         val SERVICE_CONTROL_UUID: UUID = UUID.fromString("5DE498A1-E7A6-4F4A-B323-913741895AD0")
 

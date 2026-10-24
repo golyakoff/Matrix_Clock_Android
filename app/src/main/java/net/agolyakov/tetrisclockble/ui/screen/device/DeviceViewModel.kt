@@ -149,6 +149,7 @@ class DeviceViewModel @Inject constructor(
     // ---------- Network: WiFi, time zone, firmware update (firmware v2.0.0+) ----------
 
     private val _wifiSaveFailed = MutableStateFlow(false)
+    private val _wifiSaving = MutableStateFlow(false)
     private val _deviceNameSaveFailed = MutableStateFlow(false)
     private val _firmwareCheck = MutableStateFlow<FirmwareCheck>(FirmwareCheck.Idle)
     private val _wifiUpdate = MutableStateFlow<WifiUpdate?>(null)
@@ -163,13 +164,14 @@ class DeviceViewModel @Inject constructor(
         ) { supported, timeZone, settings, status, scan ->
             NetworkUiState(supported, timeZone, settings, status, scan)
         },
-        combine(_wifiSaveFailed, _deviceNameSaveFailed, ::Pair),
+        combine(_wifiSaveFailed, _wifiSaving, _deviceNameSaveFailed, ::Triple),
         bluetoothService.updateInfo,
         _firmwareCheck,
         combine(_wifiUpdate, bluetoothService.deviceName, ::Pair),
-    ) { state, (saveFailed, nameSaveFailed), updateInfo, firmwareCheck, (wifiUpdate, deviceName) ->
+    ) { state, (saveFailed, saving, nameSaveFailed), updateInfo, firmwareCheck, (wifiUpdate, deviceName) ->
         state.copy(
             wifiSaveFailed = saveFailed,
+            wifiSaving = saving,
             updateInfo = updateInfo,
             firmwareCheck = firmwareCheck,
             wifiUpdate = wifiUpdate,
@@ -188,9 +190,15 @@ class DeviceViewModel @Inject constructor(
     }
 
     override fun saveWifiSettings(update: WifiSettingsUpdate) {
+        if (_wifiSaving.value) return
         viewModelScope.launch {
             _wifiSaveFailed.value = false
-            _wifiSaveFailed.value = !bluetoothService.saveWifiSettings(update)
+            _wifiSaving.value = true
+            try {
+                _wifiSaveFailed.value = !bluetoothService.saveWifiSettings(update)
+            } finally {
+                _wifiSaving.value = false
+            }
         }
     }
 

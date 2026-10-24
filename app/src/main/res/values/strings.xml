@@ -121,6 +121,7 @@
     <string name="mc_wifi_band_hint">Часы работают только с WiFi 2,4 ГГц</string>
     <string name="mc_wifi_pairing_hint">Пароль сети передаётся часам только по защищённому каналу: при первом сохранении Android попросит подтвердить сопряжение с часами</string>
     <string name="mc_wifi_save">Сохранить</string>
+    <string name="mc_wifi_saving">Сохраняем… Если Android попросит подтвердить сопряжение с часами, подтвердите его</string>
     <string name="mc_wifi_save_failed">Не удалось сохранить настройки WiFi: подтвердите сопряжение с часами и попробуйте ещё раз</string>
     <string name="mc_wifi_sync_now">Синхронизировать время сейчас</string>
     <string name="mc_wifi_state_off">Сейчас не подключены</string>

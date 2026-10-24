@@ -686,12 +686,6 @@ class BluetoothService @Inject constructor(
     }
 
     /**
-     * Saves the WiFi settings (the phone bonds with the clock first, see
-     * TetrisClockBleManager.writeWifiSettings) and reads them back.
-     *
-     * @return false if the clock could not be written to (not paired, link lost, invalid values).
-     */
-    /**
      * Renames the clock (an empty name restores its default) and reads the name back. The clock
      * advertises the new name after this connection ends.
      *
@@ -706,6 +700,12 @@ class BluetoothService @Inject constructor(
         false
     }
 
+    /**
+     * Saves the WiFi settings (the phone bonds with the clock first, see
+     * TetrisClockBleManager.writeWifiSettings) and reads them back.
+     *
+     * @return false if the clock could not be written to (not paired, link lost, invalid values).
+     */
     suspend fun saveWifiSettings(update: WifiSettingsUpdate): Boolean = try {
         bleManager.writeWifiSettings(NetworkCodec.encodeWifiSettings(update))
         _wifiSettings.value = NetworkCodec.decodeWifiSettings(bleManager.readNetwork(MC_WIFI_SETTINGS_CHAR_UUID))

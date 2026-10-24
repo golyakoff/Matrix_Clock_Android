@@ -121,6 +121,7 @@
     <string name="mc_wifi_band_hint">The clock works with 2.4 GHz WiFi only</string>
     <string name="mc_wifi_pairing_hint">The network password goes to the clock over an encrypted link only: on the first save Android asks to confirm pairing with the clock</string>
     <string name="mc_wifi_save">Save</string>
+    <string name="mc_wifi_saving">Saving… If Android asks to confirm pairing with the clock, confirm it</string>
     <string name="mc_wifi_save_failed">Could not save the WiFi settings: confirm pairing with the clock and try again</string>
     <string name="mc_wifi_sync_now">Sync time now</string>
     <string name="mc_wifi_state_off">Not connected now</string>

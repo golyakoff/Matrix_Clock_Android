@@ -190,6 +190,7 @@ fun WifiCard(
     status: WifiStatus?,
     scan: WifiScan?,
     saveFailed: Boolean,
+    saving: Boolean,
     actions: NetworkActions
 ) {
     // A draft of the whole characteristic, reset when the clock's value comes back
@@ -214,7 +215,7 @@ fun WifiCard(
             stringResource(R.string.mc_wifi),
             showSwitch = true,
             isOn = enabled,
-            onCheckedChange = { enabled = it }
+            onCheckedChange = { if (!saving) enabled = it }
         )
 
         Hint(stringResource(if (enabled) R.string.mc_wifi_periodic_hint else R.string.mc_wifi_off_hint))
@@ -232,6 +233,7 @@ fun WifiCard(
             OutlinedTextField(
                 value = ssid,
                 onValueChange = { ssid = it; pickedOpen = false },
+                enabled = !saving,
                 label = { Text(stringResource(R.string.mc_wifi_ssid)) },
                 supportingText = { Text(stringResource(R.string.mc_wifi_band_hint)) },
                 isError = !ssidValid,
@@ -251,6 +253,7 @@ fun WifiCard(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
+                    enabled = !saving,
                     label = { Text(stringResource(R.string.mc_wifi_password)) },
                     placeholder = {
                         Text(stringResource(if (saved.passwordStored) R.string.mc_wifi_password_kept else R.string.mc_wifi_password_none))
@@ -267,12 +270,24 @@ fun WifiCard(
             Hint(stringResource(R.string.mc_wifi_pairing_hint))
         }
 
-        if (saveFailed) {
+        if (saveFailed && !saving) {
             Spacer(Modifier.height(8.dp))
             InfoLine(stringResource(R.string.mc_wifi_save_failed), isError = true)
         }
 
-        if (changed) {
+        if (saving) {
+            // Bonding takes a few seconds before Android shows its pairing prompt
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.mc_wifi_saving),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        } else if (changed) {
             Spacer(Modifier.height(16.dp))
             CardButtonWide(
                 Icons.Default.Save,

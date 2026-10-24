@@ -90,6 +90,7 @@ fun SettingsTab(
             status = network.wifiStatus,
             scan = network.wifiScan,
             saveFailed = network.wifiSaveFailed,
+            saving = network.wifiSaving,
             actions = networkActions
         )
     }

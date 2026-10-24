@@ -39,6 +39,8 @@ data class NetworkUiState(
     val wifiStatus: WifiStatus? = null,
     val wifiScan: WifiScan? = null,
     val wifiSaveFailed: Boolean = false,
+    /** A WiFi settings write is on its way (the phone may be pairing with the clock first). */
+    val wifiSaving: Boolean = false,
     val updateInfo: UpdateInfo? = null,
     val firmwareCheck: FirmwareCheck = FirmwareCheck.Idle,
     val wifiUpdate: WifiUpdate? = null,
