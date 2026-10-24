@@ -24,6 +24,7 @@ import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
 import net.agolyakov.tetrisclockble.protocol.ClockCommand
 import net.agolyakov.tetrisclockble.protocol.OtaError
 import net.agolyakov.tetrisclockble.protocol.OtaState
+import net.agolyakov.tetrisclockble.protocol.WifiMode
 import net.agolyakov.tetrisclockble.protocol.WifiSettingsUpdate
 import net.agolyakov.tetrisclockble.data.model.ble.SplashAnimations
 import net.agolyakov.tetrisclockble.data.model.ble.SplashMode
@@ -180,12 +181,12 @@ class DeviceViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NetworkUiState())
 
-    // After the properties above: the coroutine may run checkFirmware() right away
+    // After the properties above: the coroutine may run checkPhoneFirmware() right away
     init {
         // The phone checks for a firmware update once the clock's version is known
         viewModelScope.launch {
             tetrisClockFirmwareVersion.first { it != UNKNOWN_VERSION }
-            checkFirmware()
+            checkPhoneFirmware()
         }
     }
 
@@ -217,7 +218,22 @@ class DeviceViewModel @Inject constructor(
         viewModelScope.launch { bluetoothService.sendClockCommand(ClockCommand.SYNC_TIME) }
     }
 
+    /**
+     * The Check button: the phone checks the GitHub releases, and a clock with WiFi checks its own
+     * manifest too (the clock knows its build, and a debug build reads the test channel).
+     */
     override fun checkFirmware() {
+        val settings = bluetoothService.wifiSettings.value
+        if (bluetoothService.networkSupported.value && settings != null &&
+            settings.mode != WifiMode.OFF && settings.ssid.isNotEmpty()
+        ) {
+            viewModelScope.launch { bluetoothService.sendClockCommand(ClockCommand.CHECK_UPDATE) }
+        }
+        checkPhoneFirmware()
+    }
+
+    /** The phone checks the latest GitHub release against the clock's version. */
+    private fun checkPhoneFirmware() {
         if (_firmwareCheck.value == FirmwareCheck.Checking) return
         viewModelScope.launch {
             _firmwareCheck.value = FirmwareCheck.Checking
@@ -277,7 +293,7 @@ class DeviceViewModel @Inject constructor(
                 oldVersion -> WifiUpdate.RolledBack(oldVersion)
                 else -> WifiUpdate.Done(newVersion)
             }
-            if (newVersion != null && newVersion != oldVersion) checkFirmware()
+            if (newVersion != null && newVersion != oldVersion) checkPhoneFirmware()
         }
     }
 

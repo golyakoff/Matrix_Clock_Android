@@ -536,6 +536,10 @@ fun FirmwareCard(
     onInstallOverBluetooth: () -> Unit
 ) {
     val clockCanUpdate = network.supported && network.wifiConfigured
+    val phoneFound = network.firmwareCheck is FirmwareCheck.Available
+    // The clock checks its own manifest: it may find an update the phone doesn't offer (its build
+    // is not in the latest release, a debug build on the test channel)
+    val clockFound = clockCanUpdate && network.updateInfo?.state == UpdateCheckState.AVAILABLE
 
     SettingsCard {
         CardTitle(
@@ -558,7 +562,7 @@ fun FirmwareCard(
 
         Spacer(Modifier.height(16.dp))
 
-        if (network.firmwareCheck is FirmwareCheck.Available) {
+        if (phoneFound || clockFound) {
             if (clockCanUpdate) {
                 CardButtonWide(
                     Icons.Default.Wifi,
@@ -568,14 +572,16 @@ fun FirmwareCard(
                 )
                 Spacer(Modifier.height(12.dp))
             }
-            CardButtonWide(
-                Icons.Default.Bluetooth,
-                stringResource(R.string.mc_fw_install_ble),
-                onInstallOverBluetooth,
-                !clockCanUpdate
-            )
-            Spacer(Modifier.height(8.dp))
-            Hint(stringResource(if (clockCanUpdate) R.string.mc_fw_hint_both else R.string.mc_fw_hint_phone_only))
+            if (phoneFound) {
+                CardButtonWide(
+                    Icons.Default.Bluetooth,
+                    stringResource(R.string.mc_fw_install_ble),
+                    onInstallOverBluetooth,
+                    !clockCanUpdate
+                )
+                Spacer(Modifier.height(8.dp))
+                Hint(stringResource(if (clockCanUpdate) R.string.mc_fw_hint_both else R.string.mc_fw_hint_phone_only))
+            }
         } else {
             CardButtonWide(
                 Icons.Default.SystemUpdateAlt,

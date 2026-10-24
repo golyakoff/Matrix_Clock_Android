@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import net.agolyakov.tetrisclockble.R
+import net.agolyakov.tetrisclockble.protocol.FirmwareVersion
 import net.agolyakov.tetrisclockble.data.model.ble.ConnectionState
 import net.agolyakov.tetrisclockble.data.model.github.GithubAsset
 import net.agolyakov.tetrisclockble.data.model.github.GithubRelease
@@ -339,9 +340,8 @@ class FirmwareRepository @Inject constructor(
         return buffer.array()
     }
 
-    private fun isNewVersionAvailable(current: String, latest: String): Boolean {
-        return latest != current
-    }
+    private fun isNewVersionAvailable(current: String, latest: String): Boolean =
+        FirmwareVersion.isNewer(latest, current)
 
     companion object {
         private const val TAG = "FirmwareRepository"
