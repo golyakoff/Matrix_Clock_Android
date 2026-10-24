@@ -8,6 +8,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import net.agolyakov.tetrisclockble.data.local.TetrisClockPreferences
 import net.agolyakov.tetrisclockble.data.repository.DeviceRepository
+import net.agolyakov.tetrisclockble.data.repository.AppUpdateRepository
 import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
 import net.agolyakov.tetrisclockble.data.repository.GithubRepository
 import net.agolyakov.tetrisclockble.domain.repository.PreferencesRepository
@@ -126,11 +127,13 @@ object MainModule {
     fun provideFirmwareRepository(
         bluetoothService: BluetoothService,
         githubRepository: GithubRepository,
+        appUpdateRepository: AppUpdateRepository,
         okHttpClient: OkHttpClient,
         @ApplicationContext context: Context
     ): FirmwareRepository = FirmwareRepository(
         bluetoothService,
         githubRepository,
+        appUpdateRepository,
         okHttpClient,
         context
     )

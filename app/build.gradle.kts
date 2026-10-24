@@ -11,8 +11,8 @@ plugins {
 
 // The app version: bump both together with a new section of CHANGELOG.md. A beta is "X.Y.Z-betaN"
 // (its tag vX.Y.Z-betaN is published as a pre-release, see .github/workflows/release.yml)
-val appVersionCode = 32
-val appVersionName = "2.0.0-beta2"
+val appVersionCode = 33
+val appVersionName = "2.0.0-beta3"
 
 // APK name: tetris-clock-vX.Y.Z-<build type>.apk
 base {

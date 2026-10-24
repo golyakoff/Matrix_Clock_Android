@@ -31,6 +31,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class FirmwareRepository @Inject constructor(
     private val bluetoothService: BluetoothService,
     private val githubRepository: GithubRepository,
+    private val appUpdateRepository: AppUpdateRepository,
     private val okHttpClient: OkHttpClient,
     @ApplicationContext private val context: Context
 ) {
@@ -58,12 +59,19 @@ class FirmwareRepository @Inject constructor(
         return bluetoothService.getCurrentVersion()
     }
 
-    /** Betas too when the clock is on the beta update channel. */
-    private fun clockTakesBetas(): Boolean = bluetoothService.betaUpdates.value == true
+    /**
+     * Betas too when the clock is on the beta update channel. Firmware before v2.0.0 has no channel
+     * (and no beta switch in its card): the app's own beta switch decides for it, so that such a
+     * clock can be moved onto a v2 beta over Bluetooth.
+     */
+    private suspend fun clockTakesBetas(): Boolean =
+        bluetoothService.betaUpdates.value
+            ?: (FirmwareVersion.isNewer("v2.0.0", getCurrentVersion()) && appUpdateRepository.betaUpdates.value)
 
-    suspend fun checkForUpdates(includePreReleases: Boolean = clockTakesBetas()): UpdateState {
+    /** [includePreReleases] null: as the clock takes them ([clockTakesBetas]). */
+    suspend fun checkForUpdates(includePreReleases: Boolean? = null): UpdateState {
         val currentVersion = getCurrentVersion()
-        val latestRelease = githubRepository.getLatestRelease(includePreReleases)
+        val latestRelease = githubRepository.getLatestRelease(includePreReleases ?: clockTakesBetas())
         return if (isNewVersionAvailable(currentVersion, latestRelease.tagName)) {
             UpdateState.UpdateAvailable(latestRelease, currentVersion)
         } else {
@@ -108,7 +116,7 @@ class FirmwareRepository @Inject constructor(
     }
 
     suspend fun performCompleteUpdate(
-        includePreReleases: Boolean = clockTakesBetas(),
+        includePreReleases: Boolean? = null,
         onProgress: (Float, String) -> Unit
     ): UpdateResult = withContext(Dispatchers.IO) {
         try {
