@@ -1,3 +1,10 @@
+# Release 2.1.2
+
+- [x] A clock opens with its settings in place: the loading spinner stays until they are read from the clock, instead of the controls showing their defaults and then moving to the clock's values
+- [x] Leaving a clock unsubscribes from its notifications before disconnecting, so the clock drops the link at once and shows up in the list again (Android kept the link to a paired clock open)
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v2.1.1...v2.1.2
+
 # Release 2.1.1
 
 - [x] The dialog of a firmware update over WiFi says how it ended in its title: "Firmware updated" or "Update failed" instead of the title of the button that started it
