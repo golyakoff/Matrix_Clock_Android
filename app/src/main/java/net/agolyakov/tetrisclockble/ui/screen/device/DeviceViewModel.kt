@@ -285,7 +285,11 @@ class DeviceViewModel @Inject constructor(
             }
             when (last?.state) {
                 OtaState.SUCCESS -> Unit
-                OtaState.NO_UPDATE -> { _wifiUpdate.value = WifiUpdate.Failed(R.string.mc_fw_error_no_update); return@launch }
+                OtaState.NO_UPDATE -> {
+                    _wifiUpdate.value = WifiUpdate.Failed(
+                        if (last.error == OtaError.NO_BUILD) R.string.mc_fw_error_no_build else R.string.mc_fw_error_no_update)
+                    return@launch
+                }
                 OtaState.ERROR -> { _wifiUpdate.value = WifiUpdate.Failed(otaErrorMessage(last.error)); return@launch }
                 // The link may be gone mid-download: the clock goes on, the result is unknown
                 else -> { _wifiUpdate.value = WifiUpdate.Failed(R.string.mc_fw_error_not_verified); return@launch }

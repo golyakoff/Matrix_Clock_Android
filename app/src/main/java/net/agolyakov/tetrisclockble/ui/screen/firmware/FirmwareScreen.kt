@@ -1,41 +1,16 @@
 package net.agolyakov.tetrisclockble.ui.screen.firmware
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import net.agolyakov.tetrisclockble.R
-import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository
-import net.agolyakov.tetrisclockble.ui.screen.firmware.NoUpdateScreenInternal
+import net.agolyakov.tetrisclockble.data.repository.FirmwareRepository.UpdateState
 import net.agolyakov.tetrisclockble.ui.theme.TetrisClockBLETheme
 
+/** The update from the phone over Bluetooth, in the forms of UpdateScreens.kt. */
 @Composable
 fun FirmwareScreen(
     viewModel: FirmwareViewModel = hiltViewModel(),
@@ -45,917 +20,141 @@ fun FirmwareScreen(
     val progress by viewModel.progress.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surfaceContainer),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            when (val currentState = state) {
-                is FirmwareRepository.UpdateState.Idle -> {
-                    IdleScreen(viewModel)
-                }
+    val back = UpdateAction(stringResource(R.string.mc_back), onBack)
+    UpdateScreenFrame {
+        when (val s = state) {
+            UpdateState.Idle -> UpdatePromptScreen(
+                title = stringResource(R.string.mc_firmware_update_title),
+                primary = UpdateAction(stringResource(R.string.mc_firmware_check_for_updates), viewModel::checkForUpdates)
+            )
 
-                is FirmwareRepository.UpdateState.Checking -> {
-                    CheckingScreen()
-                }
+            UpdateState.Checking -> UpdateProgressScreen(stringResource(R.string.mc_firmware_checking))
 
-                is FirmwareRepository.UpdateState.Processing -> {
-                    ProcessingScreen(progress, statusMessage)
-                }
+            UpdateState.Processing -> UpdateProgressScreen(
+                title = stringResource(R.string.mc_firmware_processing),
+                progress = progress,
+                detail = statusMessage
+            )
 
-                is FirmwareRepository.UpdateState.UpdateAvailable -> {
-                    UpdateAvailableScreen(currentState, viewModel, onBack)
-                }
+            is UpdateState.UpdateAvailable -> UpdatePromptScreen(
+                title = stringResource(R.string.mc_firmware_update_available),
+                lines = listOf(
+                    stringResource(R.string.mc_firmware_current_version, s.currentVersion),
+                    stringResource(R.string.mc_firmware_new_version, s.release.tagName)
+                ),
+                primary = UpdateAction(stringResource(R.string.mc_firmware_update_action), viewModel::performCompleteUpdate),
+                secondary = back
+            )
 
-                is FirmwareRepository.UpdateState.NoUpdate -> {
-                    NoUpdateScreen(currentState, onBack)
-                }
+            is UpdateState.NoUpdate -> UpdateResultScreen(
+                success = true,
+                title = stringResource(R.string.mc_firmware_up_to_date),
+                message = stringResource(R.string.mc_firmware_version, s.currentVersion),
+                primary = back
+            )
 
-                is FirmwareRepository.UpdateState.Downloading -> {
-                    DownloadingScreen(progress, statusMessage)
-                }
+            is UpdateState.Downloading -> UpdateProgressScreen(
+                title = stringResource(R.string.mc_ota_downloading),
+                progress = progress,
+                detail = statusMessage
+            )
 
-                is FirmwareRepository.UpdateState.ReadyToInstall -> {
-                    ReadyToInstallScreen(currentState, viewModel)
-                }
+            is UpdateState.ReadyToInstall -> UpdatePromptScreen(
+                title = stringResource(R.string.mc_firmware_ready),
+                lines = listOf(
+                    stringResource(R.string.mc_firmware_version, s.release.tagName),
+                    stringResource(R.string.mc_firmware_size, s.file.length() / 1024)
+                ),
+                primary = UpdateAction(stringResource(R.string.mc_firmware_install_action)) { viewModel.installFirmware(s.file) }
+            )
 
-                is FirmwareRepository.UpdateState.Installing -> {
-                    InstallingScreen(progress, statusMessage)
-                }
+            is UpdateState.Installing -> UpdateProgressScreen(
+                title = stringResource(R.string.mc_ota_installing),
+                progress = progress,
+                detail = statusMessage
+            )
 
-                is FirmwareRepository.UpdateState.Success -> {
-                    SuccessScreen(onBack)
-                }
+            UpdateState.Success -> UpdateResultScreen(
+                success = true,
+                title = stringResource(R.string.mc_ota_complete),
+                primary = UpdateAction(stringResource(R.string.mc_firmware_done_action), onBack)
+            )
 
-                is FirmwareRepository.UpdateState.Error -> {
-                    ErrorScreen(currentState, viewModel, onBack)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun IdleScreen(viewModel: FirmwareViewModel) {
-    IdleScreenInternal(
-        { viewModel.checkForUpdates() }
-    )
-}
-
-@Composable
-private fun IdleScreenInternal(
-    onCheckForUpdates: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.mc_firmware_update_title),
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = onCheckForUpdates,
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            Text(
-                text = stringResource(R.string.mc_firmware_check_for_updates),
-                style = MaterialTheme.typography.titleMedium
+            is UpdateState.Error -> UpdateResultScreen(
+                success = false,
+                title = stringResource(R.string.mc_error),
+                message = s.message,
+                primary = UpdateAction(stringResource(R.string.mc_firmware_retry_action), viewModel::checkForUpdates),
+                secondary = back
             )
         }
     }
 }
 
 @Composable
-private fun CheckingScreen() {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(72.dp),
-            strokeWidth = 10.dp
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_checking),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
+private fun PreviewFrame(darkTheme: Boolean, content: @Composable () -> Unit) {
+    TetrisClockBLETheme(darkTheme = darkTheme) { UpdateScreenFrame(content) }
 }
 
 @Composable
-private fun UpdateAvailableScreen(
-    state: FirmwareRepository.UpdateState.UpdateAvailable,
-    viewModel: FirmwareViewModel,
-    onBack: () -> Unit
-) {
-    UpdateAvailableScreenInternal(
-        state.currentVersion,
-        state.release.tagName,
-        { viewModel.performCompleteUpdate() },
-        onBack
-    )
-}
-
-@Composable
-private fun UpdateAvailableScreenInternal(
-    currentFirmwareVersion: String,
-    newFirmwareVersion: String,
-    onInstall: () -> Unit,
-    onBack: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.mc_firmware_update_available),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_current_version, currentFirmwareVersion),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_new_version, newFirmwareVersion),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onInstall,
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            Text(
-                text = stringResource(R.string.mc_firmware_update_action),
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-               Text(
-                   text = stringResource(R.string.mc_back),
-                   style = MaterialTheme.typography.titleMedium
-               )
-        }
-    }
-}
-
-@Composable
-private fun NoUpdateScreen(
-    state: FirmwareRepository.UpdateState.NoUpdate,
-    onBack: () -> Unit
-) {
-    NoUpdateScreenInternal(
-        state.currentVersion,
-        onBack
-    )
-}
-
-@Composable
-private fun NoUpdateScreenInternal(
-    currentFirmwareVersion: String,
-    onBack: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = stringResource(R.string.mc_content_description_success),
-            tint = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.size(72.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_up_to_date),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_version, currentFirmwareVersion),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.tertiary,
-                contentColor = MaterialTheme.colorScheme.onTertiary),
-            onClick = onBack
-        ) {
-            Text(
-                text = stringResource(R.string.mc_back),
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-    }
-}
-
-@Composable
-private fun DownloadingScreen(
-    progress: Float,
-    statusMessage: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(72.dp),
-            strokeWidth = 10.dp,
-            progress = { progress / 100f })
-
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = stringResource(R.string.mc_firmware_download_progress, progress),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = statusMessage,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
-private fun ReadyToInstallScreen(
-    state: FirmwareRepository.UpdateState.ReadyToInstall,
-    viewModel: FirmwareViewModel
-) {
-    ReadyToInstallScreenInternal(
-        firmwareVersion = state.release.tagName,
-        firmwareSize = state.file.length(),
-        onInstall = { viewModel.installFirmware(state.file) }
-    )
-}
-
-@Composable
-private fun ReadyToInstallScreenInternal(
-    firmwareVersion: String,
-    firmwareSize: Long,
-    onInstall: () -> Unit,
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.mc_firmware_ready),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_version, firmwareVersion),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_size, firmwareSize / 1024),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onInstall
-        ) {
-            Text(
-                text = stringResource(R.string.mc_firmware_install_action),
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-    }
-}
-
-
-@Composable
-private fun InstallingScreen(
-    progress: Float,
-    statusMessage: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(72.dp),
-            strokeWidth = 10.dp,
-            progress = { progress / 100f })
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringResource(R.string.mc_firmware_install_progress, progress),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = statusMessage,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-@Composable
-private fun ProcessingScreen(
-    progress: Float,
-    statusMessage: String
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(72.dp),
-            strokeWidth = 10.dp,
-            progress = { progress / 100f })
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            style = MaterialTheme.typography.titleMedium,
-            text = stringResource(R.string.mc_firmware_processing),
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text ="${"%.1f".format(progress)}%",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = statusMessage,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-    }
-}
-
-
-@Composable
-private fun SuccessScreen(onBack: () -> Unit) {
-    SuccessScreenInternal(
-        stringResource(R.string.mc_ota_complete),
-        onBack
-    )
-}
-
-@Composable
-private fun SuccessScreenInternal(
-    message: String,
-    onBack: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = stringResource(R.string.mc_content_description_success),
-            tint = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.size(72.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = message,
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.tertiary,
-                contentColor = MaterialTheme.colorScheme.onTertiary),
-            onClick = onBack
-        ) {
-            Text(
-                text = stringResource(R.string.mc_firmware_done_action),
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-    }
-}
-
-@Composable
-private fun ErrorScreen(
-    state: FirmwareRepository.UpdateState.Error,
-    viewModel: FirmwareViewModel,
-    onBack: () -> Unit
-) {
-    ErrorScreenInternal(
-        state.message,
-        { viewModel.checkForUpdates() },
-        onBack
-    )
-}
-
-@Composable
-private fun ErrorScreenInternal(
-    message: String,
-    onRepeat: () -> Unit,
-    onBack: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Icon(
-            imageVector = Icons.Default.Error,
-            contentDescription = stringResource(R.string.mc_error),
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(72.dp)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringResource(R.string.mc_error),
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.error
-        )
-
-        Text(
-            text = message,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onRepeat,
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            Text(
-                text = stringResource(R.string.mc_firmware_retry_action),
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier.fillMaxWidth(0.85f),
-        ) {
-            Text(
-                text = stringResource(R.string.mc_back),
-                style = MaterialTheme.typography.titleMedium)
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "Error: Light Theme",
-    showBackground = true,
-    heightDp = 300
+private fun PromptPreview() = UpdatePromptScreen(
+    title = "Доступно обновление!",
+    lines = listOf("Текущая версия: v2.1.0", "Новая версия: v2.1.1"),
+    primary = UpdateAction("Обновить") {},
+    secondary = UpdateAction("Назад") {}
 )
-fun ErrorScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            ErrorScreenInternal(
-                "Сообщение об ошибке!",
-                {},
-                {}
-            )
-        }
-    }
-}
 
 @Composable
-@Preview(
-    name = "Error: Dark Theme",
-    showBackground = true,
-    heightDp = 300
+private fun ProgressPreview() = UpdateProgressScreen(
+    title = "Выполняется обновление...",
+    progress = 42.5f,
+    detail = "Установка обновления..."
 )
-fun ErrorScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            ErrorScreenInternal(
-                "Сообщение об ошибке!",
-                {},
-                {}
-            )
-        }
-    }
-}
 
 @Composable
-@Preview(
-    name = "Success: Light Theme",
-    showBackground = true,
-    heightDp = 250
+private fun ErrorPreview() = UpdateResultScreen(
+    success = false,
+    title = "Ошибка",
+    message = "Сообщение об ошибке!",
+    primary = UpdateAction("Попробовать снова") {},
+    secondary = UpdateAction("Назад") {}
 )
-fun SuccessScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            SuccessScreenInternal(
-                "Обновление завершено!",
-                {}
-            )
-        }
-    }
-}
 
 @Composable
-@Preview(
-    name = "Success: Dark Theme",
-    showBackground = true,
-    heightDp = 250
+private fun SuccessPreview() = UpdateResultScreen(
+    success = true,
+    title = "Обновление завершено!",
+    primary = UpdateAction("Готово") {}
 )
-fun SuccessScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            SuccessScreenInternal(
-                "Обновление завершено!",
-                {}
-            )
-        }
-    }
-}
 
+@Preview(name = "Prompt: Light", heightDp = 400)
 @Composable
-@Preview(
-    name = "Processing: Light Theme",
-    showBackground = true,
-    heightDp = 200
-)
-fun ProcessingScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            ProcessingScreen(
-                 71f,
-                 "Идёт обработка"
-            )
-        }
-    }
-}
+fun PromptScreen_Light_Preview() = PreviewFrame(false) { PromptPreview() }
 
+@Preview(name = "Prompt: Dark", heightDp = 400)
 @Composable
-@Preview(
-    name = "Processing: Dark Theme",
-    showBackground = true,
-    heightDp = 200
-)
-fun ProcessingScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            ProcessingScreen(
-                23.52f,
-                "Идёт обработка"
-            )
-        }
-    }
-}
+fun PromptScreen_Dark_Preview() = PreviewFrame(true) { PromptPreview() }
 
-
-
+@Preview(name = "Progress: Light", heightDp = 400)
 @Composable
-@Preview(
-    name = "Installing: Light Theme",
-    showBackground = true,
-    heightDp = 200
-)
-fun InstallingScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            InstallingScreen(
-                71f,
-                "Идёт установка"
-            )
-        }
-    }
-}
+fun ProgressScreen_Light_Preview() = PreviewFrame(false) { ProgressPreview() }
 
+@Preview(name = "Progress: Dark", heightDp = 400)
 @Composable
-@Preview(
-    name = "Installing: Dark Theme",
-    showBackground = true,
-    heightDp = 200
-)
-fun InstallingScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            InstallingScreen(
-                23.52f,
-                "Идёт установка"
-            )
-        }
-    }
-}
+fun ProgressScreen_Dark_Preview() = PreviewFrame(true) { ProgressPreview() }
 
+@Preview(name = "Error: Light", heightDp = 400)
 @Composable
-@Preview(
-    name = "ReadyToInstall: Light Theme",
-    showBackground = true,
-    heightDp = 250
-)
-fun ReadyToInstallScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            ReadyToInstallScreenInternal(
-                "v2.5.92-rc21",
-                2387822,
-                {}
-            )
-        }
-    }
-}
+fun ErrorScreen_Light_Preview() = PreviewFrame(false) { ErrorPreview() }
 
+@Preview(name = "Error: Dark", heightDp = 400)
 @Composable
-@Preview(
-    name = "ReadyToInstall: Dark Theme",
-    showBackground = true,
-    heightDp = 250
-)
-fun ReadyToInstallScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            ReadyToInstallScreenInternal(
-                "v1.5.92",
-                1938782,
-                {}
-            )
-        }
-    }
-}
+fun ErrorScreen_Dark_Preview() = PreviewFrame(true) { ErrorPreview() }
 
+@Preview(name = "Success: Light", heightDp = 400)
 @Composable
-@Preview(
-    name = "Installing: Light Theme",
-    showBackground = true,
-    heightDp = 200
-)
-fun DownloadingScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            DownloadingScreen(
-                71f,
-                "Идёт установка"
-            )
-        }
-    }
-}
+fun SuccessScreen_Light_Preview() = PreviewFrame(false) { SuccessPreview() }
 
+@Preview(name = "Success: Dark", heightDp = 400)
 @Composable
-@Preview(
-    name = "Installing: Dark Theme",
-    showBackground = true,
-    heightDp = 200
-)
-fun DownloadingScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            DownloadingScreen(
-                23.52f,
-                "Идёт установка"
-            )
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "NoUpdateScreen: Light Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun NoUpdateScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            NoUpdateScreenInternal(
-                "v2.5.92-rc21",
-                {}
-            )
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "NoUpdateScreen: Dark Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun NoUpdateScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            NoUpdateScreenInternal(
-                "v1.5.92",
-                {}
-            )
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "UpdateAvailableScreen: Light Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun UpdateAvailableScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            UpdateAvailableScreenInternal(
-                "v2.5.92-rc21",
-                "v3.0.0",
-                {},
-                {}
-            )
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "UpdateAvailableScreen: Dark Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun UpdateAvailableScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            UpdateAvailableScreenInternal(
-                "v1.5.92",
-                "v2.1.0",
-                {},
-                {}
-            )
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "CheckingScreen: Light Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun CheckingScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            CheckingScreen()
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "CheckingScreen: Dark Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun CheckingScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            CheckingScreen()
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "IdleScreen: Light Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun IdleScreen_Light_Preview() {
-    TetrisClockBLETheme(darkTheme = false) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            IdleScreenInternal ({})
-        }
-    }
-}
-
-@Composable
-@Preview(
-    name = "IdleScreen: Dark Theme",
-    showBackground = true,
-    heightDp = 300
-)
-fun IdleScreen_Dark_Preview() {
-    TetrisClockBLETheme(darkTheme = true) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.surfaceContainer
-        ) {
-            IdleScreenInternal({})
-        }
-    }
-}
+fun SuccessScreen_Dark_Preview() = PreviewFrame(true) { SuccessPreview() }

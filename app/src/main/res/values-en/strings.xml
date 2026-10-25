@@ -169,13 +169,14 @@
     <string name="mc_fw_progress_clock_downloading">The clock is downloading and writing the firmware…</string>
     <string name="mc_fw_progress_amount">%1$s / %2$s KB</string>
     <string name="mc_fw_progress_rebooting">The clock restarts with the new firmware…</string>
-    <string name="mc_fw_progress_continues">The clock updates by itself: you can close this window</string>
+    <string name="mc_fw_progress_continues">The clock updates by itself: you can close this screen</string>
     <string name="mc_fw_done">The clock runs firmware %1$s</string>
     <string name="mc_fw_wifi_title_progress">Update over WiFi</string>
     <string name="mc_fw_wifi_title_done">Firmware updated</string>
     <string name="mc_fw_wifi_title_failed">Update failed</string>
     <string name="mc_fw_rolled_back">The new firmware did not start, the clock went back to %1$s</string>
     <string name="mc_fw_error_no_update">The clock found no newer version</string>
+    <string name="mc_fw_error_no_build">The new version has no build for the firmware of this clock (a custom build): update it from the phone over Bluetooth</string>
     <string name="mc_fw_error_download">The clock could not download the update: check WiFi</string>
     <string name="mc_fw_error_sha">The downloaded file is damaged, try again</string>
     <string name="mc_fw_error_flash">Writing the firmware failed; the clock restarts with the old firmware</string>

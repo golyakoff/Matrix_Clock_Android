@@ -629,7 +629,6 @@ fun FirmwareCard(
         }
     }
 
-    network.wifiUpdate?.let { WifiUpdateDialog(it, actions::dismissWifiUpdate) }
 }
 
 @Composable
@@ -642,77 +641,4 @@ private fun ClockCheckLine(info: UpdateInfo) {
         else -> return
     }
     Hint(text)
-}
-
-/** Progress of the update the clock installs by itself; closing it does not stop the clock. */
-@Composable
-private fun WifiUpdateDialog(update: WifiUpdate, onDismiss: () -> Unit) {
-    // The title says how it went once it is over, the text then gives the details
-    val failed = update is WifiUpdate.RolledBack || update is WifiUpdate.Failed
-    AlertDialog(
-        onDismissRequest = { if (update.finished) onDismiss() },
-        icon = {
-            when {
-                update is WifiUpdate.Done -> Icon(Icons.Default.CheckCircle, contentDescription = null)
-                failed -> Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                else -> Icon(Icons.Default.SystemUpdateAlt, contentDescription = null)
-            }
-        },
-        title = {
-            Text(
-                stringResource(
-                    when {
-                        update is WifiUpdate.Done -> R.string.mc_fw_wifi_title_done
-                        failed -> R.string.mc_fw_wifi_title_failed
-                        else -> R.string.mc_fw_wifi_title_progress
-                    }
-                )
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                when (update) {
-                    WifiUpdate.Checking -> {
-                        Text(stringResource(R.string.mc_fw_progress_clock_checking))
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                    is WifiUpdate.Downloading -> {
-                        Text(stringResource(R.string.mc_fw_progress_clock_downloading))
-                        if (update.total > 0) {
-                            LinearProgressIndicator(
-                                progress = { (update.received.toFloat() / update.total).coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Text(
-                                stringResource(R.string.mc_fw_progress_amount, (update.received / 1024).toString(), (update.total / 1024).toString()),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
-                        } else {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                    WifiUpdate.Rebooting -> {
-                        Text(stringResource(R.string.mc_fw_progress_rebooting))
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                    is WifiUpdate.Done -> Text(stringResource(R.string.mc_fw_done, update.version))
-                    is WifiUpdate.RolledBack -> Text(stringResource(R.string.mc_fw_rolled_back, update.version))
-                    is WifiUpdate.Failed -> Text(stringResource(update.message), color = MaterialTheme.colorScheme.error)
-                }
-                if (!update.finished) {
-                    Text(
-                        stringResource(R.string.mc_fw_progress_continues),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.mc_dialog_close))
-            }
-        }
-    )
 }

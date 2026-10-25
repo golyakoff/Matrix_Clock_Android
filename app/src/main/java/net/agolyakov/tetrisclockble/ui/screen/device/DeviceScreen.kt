@@ -373,6 +373,12 @@ fun DeviceSettings(
     networkActions: NetworkActions = NoNetworkActions,
     initialTab: DeviceTab = DeviceTab.CLOCK
 ) {
+    // An update over WiFi takes the whole screen, as the one over Bluetooth does
+    network.wifiUpdate?.let { update ->
+        WifiUpdateScreen(update, networkActions::dismissWifiUpdate, networkActions::installFirmwareByWifi)
+        return
+    }
+
     // A newer firmware found by the phone or by the clock itself
     val updateAvailable = network.firmwareCheck is FirmwareCheck.Available ||
         network.updateInfo?.state == UpdateCheckState.AVAILABLE

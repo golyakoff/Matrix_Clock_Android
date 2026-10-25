@@ -160,6 +160,8 @@ enum class OtaError(override val code: Int) : Coded {
     SHA256_MISMATCH(5),
     /** No WiFi, or the manifest / file could not be downloaded. */
     DOWNLOAD_FAILED(8),
+    /** With [OtaState.NO_UPDATE]: a newer release has no build for this clock (a custom build). */
+    NO_BUILD(9),
     UNKNOWN(-1)
 }
 

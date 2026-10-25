@@ -171,13 +171,14 @@
     <string name="mc_fw_progress_clock_downloading">Часы скачивают и записывают прошивку…</string>
     <string name="mc_fw_progress_amount">%1$s / %2$s КБ</string>
     <string name="mc_fw_progress_rebooting">Часы перезапускаются с новой прошивкой…</string>
-    <string name="mc_fw_progress_continues">Часы обновляются сами: окно можно закрыть</string>
+    <string name="mc_fw_progress_continues">Часы обновляются сами: этот экран можно закрыть</string>
     <string name="mc_fw_done">Часы работают на прошивке %1$s</string>
     <string name="mc_fw_wifi_title_progress">Обновление по WiFi</string>
     <string name="mc_fw_wifi_title_done">Прошивка обновлена</string>
     <string name="mc_fw_wifi_title_failed">Обновление не удалось</string>
     <string name="mc_fw_rolled_back">Новая прошивка не запустилась, часы вернулись к %1$s</string>
     <string name="mc_fw_error_no_update">Часы не нашли новой версии</string>
+    <string name="mc_fw_error_no_build">В новой версии нет сборки для прошивки этих часов (собранной самостоятельно): обновите их с телефона по Bluetooth</string>
     <string name="mc_fw_error_download">Часам не удалось скачать обновление: проверьте WiFi</string>
     <string name="mc_fw_error_sha">Скачанный файл повреждён, попробуйте ещё раз</string>
     <string name="mc_fw_error_flash">Ошибка записи прошивки; часы перезапустятся со старой прошивкой</string>
