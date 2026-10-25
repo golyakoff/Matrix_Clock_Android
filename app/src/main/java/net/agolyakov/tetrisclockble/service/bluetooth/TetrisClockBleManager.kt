@@ -157,6 +157,7 @@ class TetrisClockBleManager(
         }
         setupMtu()
         clockRequiresBond = false
+        bondPending = false
         // Firmware v2.1.0+ lets only bonded phones in: everything but the version needs an encrypted
         // link. The (open) version is read first and the phone bonds before the notifications are
         // enabled; without the bond the first access would fail with Insufficient Encryption and
@@ -167,7 +168,13 @@ class TetrisClockBleManager(
                 val version = data.value?.toString(Charsets.US_ASCII) ?: ""
                 clockRequiresBond = FirmwareVersion.requiresBond(version)
                 if (clockRequiresBond && bluetoothDevice?.bondState != BluetoothDevice.BOND_BONDED) {
-                    createBondInsecure().enqueue()
+                    // Enqueued from a callback, the bond is not part of the initialization: the
+                    // manager reports the device ready before the bond is made (or refused)
+                    bondPending = true
+                    createBondInsecure()
+                        .done { bondPending = false; onBondDone?.invoke() }
+                        .fail { _, _ -> bondPending = false }
+                        .enqueue()
                 }
                 setupNotifications()
             }
@@ -179,6 +186,14 @@ class TetrisClockBleManager(
     @Volatile
     var clockRequiresBond = false
         private set
+
+    /** The bond asked for on connecting is not made yet (the clock may still refuse it). */
+    @Volatile
+    var bondPending = false
+        private set
+
+    /** Called once the bond asked for on connecting is made. */
+    var onBondDone: (() -> Unit)? = null
 
     /**
      * Negotiated ATT MTU (suspends until the MTU exchange completes after connect).
@@ -601,7 +616,12 @@ class TetrisClockBleManager(
      */
     suspend fun writeWifiSettings(value: ByteArray) {
         if (bluetoothDevice?.bondState != BluetoothDevice.BOND_BONDED) {
-            createBondInsecure().suspend()
+            bondPending = true
+            try {
+                createBondInsecure().suspend()
+            } finally {
+                bondPending = false
+            }
         }
         repeat(WIFI_WRITE_ATTEMPTS - 1) { attempt ->
             try {

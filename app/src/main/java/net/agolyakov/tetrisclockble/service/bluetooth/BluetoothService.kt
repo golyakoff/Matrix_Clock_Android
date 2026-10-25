@@ -96,8 +96,11 @@ class BluetoothService @Inject constructor(
         Log.d("BluetoothService", "Exited OTA update mode")
     }
 
+    // Android's pairing prompt pauses the activity: dropping the link then would break the pairing,
+    // and take the clock's refusal for our own disconnect (the app reconnected over and over)
     fun shouldPreserveConnection(): Boolean {
-        return isOtaUpdateMode
+        return isOtaUpdateMode || bleManager.bondPending ||
+            _connectionState.value is ConnectionState.Bonding
     }
 
     // Firmware Version
@@ -304,9 +307,14 @@ class BluetoothService @Inject constructor(
 
         override fun onDeviceReady(device: BluetoothDevice) {
             if (notTarget(device)) return
-            _connectionState.value = ConnectionState.Ready
-            startReadingAllCharacteristics()
-            networkScope.launch { initNetwork() }
+            // A phone pairing with the clock is not in yet: the clock may still refuse it, and
+            // until it is bonded every read fails. Ready (and the clock's cards) waits for the bond.
+            if (bleManager.bondPending) {
+                readyAfterBond = true
+                _connectionState.value = ConnectionState.Bonding
+                return
+            }
+            becomeReady()
         }
 
         override fun onDeviceDisconnecting(device: BluetoothDevice) {
@@ -333,6 +341,16 @@ class BluetoothService @Inject constructor(
             }
             tryReconnect()
         }
+    }
+
+    /** onDeviceReady() came while the phone was still bonding: Ready follows the bond. */
+    private var readyAfterBond = false
+
+    private fun becomeReady() {
+        readyAfterBond = false
+        _connectionState.value = ConnectionState.Ready
+        startReadingAllCharacteristics()
+        networkScope.launch { initNetwork() }
     }
 
     /** The phone had no bond when this connection attempt started, or bonding started during it. */
@@ -405,6 +423,9 @@ class BluetoothService @Inject constructor(
     init {
         bleManager.connectionObserver = connectionObserver
         bleManager.setBondingObserver(bondingObserver)
+        bleManager.onBondDone = {
+            if (readyAfterBond && _connectionState.value is ConnectionState.Bonding) becomeReady()
+        }
         bleManager.onNetworkNotification = ::onNetworkNotification
     }
 
@@ -479,6 +500,7 @@ class BluetoothService @Inject constructor(
         resetDeviceState()
 
         targetAddress = tetrisClockDevice.macAddress
+        readyAfterBond = false
         // From now on a reconnect means this clock, also before the first connection succeeds
         _lastConnectedDevice = tetrisClockDevice
         _connectionState.value = ConnectionState.Connecting
