@@ -140,7 +140,27 @@ private fun formatEpoch(epochSeconds: Long): String =
 // ---------- Device name ----------
 
 @Composable
-fun DeviceNameCard(
+fun BluetoothCard(
+    macAddress: String,
+    savedName: String?,
+    saveFailed: Boolean,
+    actions: NetworkActions
+) {
+    SettingsCard {
+        CardTitle(Icons.Default.Bluetooth, stringResource(R.string.mc_bluetooth))
+
+        InfoLine(stringResource(R.string.mc_clock_mac_address, macAddress))
+
+        // The name can be changed on firmware v2.0.0+ only
+        savedName?.let {
+            Spacer(Modifier.height(16.dp))
+            DeviceNameEditor(it, saveFailed, actions)
+        }
+    }
+}
+
+@Composable
+private fun DeviceNameEditor(
     saved: String,
     saveFailed: Boolean,
     actions: NetworkActions
@@ -150,9 +170,7 @@ fun DeviceNameCard(
     val valid = NetworkCodec.isValidDeviceName(name.trim())
     val changed = name.trim() != saved
 
-    SettingsCard {
-        CardTitle(Icons.Default.Bluetooth, stringResource(R.string.mc_device_name))
-
+    Column {
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },

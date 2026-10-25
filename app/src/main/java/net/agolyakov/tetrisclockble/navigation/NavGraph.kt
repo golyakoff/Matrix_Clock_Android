@@ -21,7 +21,8 @@ import net.agolyakov.tetrisclockble.ui.screen.settings.SettingsScreen
 
 @Composable
 fun SetupNavGraph(
-    navController: NavHostController
+    navController: NavHostController,
+    onDeviceTitle: (String?) -> Unit = {}
 ) {
     NavHost(navController = navController,
         startDestination = Screen.Home.route
@@ -56,6 +57,11 @@ fun SetupNavGraph(
                 navController.previousBackStackEntry?.savedStateHandle?.get<TetrisClockDevice>("device")
 
             val deviceViewModel: DeviceViewModel = hiltViewModel()
+            val title = device?.getDisplayName()
+            DisposableEffect(title) {
+                onDeviceTitle(title)
+                onDispose { onDeviceTitle(null) }
+            }
 
             DeviceScreen(navController, device)
         }

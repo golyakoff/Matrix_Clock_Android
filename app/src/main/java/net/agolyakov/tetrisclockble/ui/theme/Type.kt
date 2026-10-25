@@ -38,8 +38,10 @@ val AppTypography = Typography(
     displayMedium = baseline.displayMedium.copy(fontFamily = displayFontFamily),
     displaySmall = baseline.displaySmall.copy(fontFamily = displayFontFamily),
     headlineLarge = baseline.headlineLarge.copy(fontFamily = displayFontFamily),
-    headlineMedium = baseline.headlineMedium.copy(fontFamily = displayFontFamily, fontSize = 25.sp, lineHeight = 32.sp),
-    headlineSmall = baseline.headlineSmall.copy(fontFamily = displayFontFamily, fontSize = 21.sp, lineHeight = 28.sp),
+    // Sized to fit the cards at a large system font too (1.3x): the clock faces (time* styles below),
+    // the card titles (headlineSmall). Every text size of the app comes from here.
+    headlineMedium = baseline.headlineMedium.copy(fontFamily = displayFontFamily, fontSize = 22.sp, lineHeight = 28.sp),
+    headlineSmall = baseline.headlineSmall.copy(fontFamily = displayFontFamily, fontSize = 18.sp, lineHeight = 24.sp),
     titleLarge = baseline.titleLarge.copy(fontFamily = bodyFontFamily),
     titleMedium = baseline.titleMedium.copy(fontFamily = bodyFontFamily),
     titleSmall = baseline.titleSmall.copy(fontFamily = bodyFontFamily),

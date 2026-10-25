@@ -4,8 +4,10 @@ package net.agolyakov.tetrisclockble.ui.screen.device
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -15,6 +17,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Adjust
+import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PermDeviceInformation
 import androidx.compose.material.icons.filled.SwapCalls
@@ -39,8 +42,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import net.agolyakov.tetrisclockble.R
 import net.agolyakov.tetrisclockble.protocol.TimeZoneMapper
@@ -59,12 +64,20 @@ fun SettingsTab(
     firmwareVersion: String,
     onFirmwareUpdateButtonClickAction: () -> Unit,
     flashSizeMb: Int,
+    macAddress: String,
     rtcTemperature: Float,
     isRrbbggColorOrder: Boolean,
     onColorOrderSelected: (Boolean) -> Unit,
     network: NetworkUiState,
     networkActions: NetworkActions
 ) {
+    FirmwareCard(
+        firmwareVersion = firmwareVersion,
+        network = network,
+        actions = networkActions,
+        onInstallOverBluetooth = onFirmwareUpdateButtonClickAction
+    )
+
     TimeSyncCard(
         modifier = Modifier,
         bleTime,
@@ -75,14 +88,13 @@ fun SettingsTab(
         timeZone = network.timeZone
     )
 
-    // Firmware v2.0.0+ only
-    network.deviceName?.takeIf { network.supported }?.let { saved ->
-        DeviceNameCard(
-            saved = saved,
-            saveFailed = network.deviceNameSaveFailed,
-            actions = networkActions
-        )
-    }
+    BluetoothCard(
+        macAddress = macAddress,
+        // Firmware v2.0.0+ only
+        savedName = network.deviceName?.takeIf { network.supported },
+        saveFailed = network.deviceNameSaveFailed,
+        actions = networkActions
+    )
 
     network.wifiSettings?.takeIf { network.supported }?.let { saved ->
         WifiCard(
@@ -95,19 +107,14 @@ fun SettingsTab(
         )
     }
 
-    FirmwareCard(
-        firmwareVersion = firmwareVersion,
-        network = network,
-        actions = networkActions,
-        onInstallOverBluetooth = onFirmwareUpdateButtonClickAction
+    MatrixCard(
+        isRrbbggColorOrder,
+        onColorOrderSelected
     )
 
     SystemInfoCard(
-        modifier = Modifier,
         flashSizeMb,
-        rtcTemperature,
-        isRrbbggColorOrder,
-        onColorOrderSelected
+        rtcTemperature
     )
 }
 
@@ -144,20 +151,23 @@ fun TimeSyncCard(
                 stringResource(R.string.mc_accuracy))
 
             // Карточки времени в строку
+            // Both cards as tall as the taller one, should a title wrap at a large font
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 TimeCard(
                     title = stringResource(R.string.mc_time_of_tetris_clock),
                     time = bleTime,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
 
                 TimeCard(
                     title = stringResource(R.string.mc_time_of_mobile_phone),
                     time = phoneTime,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).fillMaxHeight()
                 )
             }
 
@@ -224,9 +234,10 @@ fun TimeCard(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.outline
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center
             )
 
             Spacer(Modifier.height(4.dp))
@@ -334,16 +345,61 @@ fun AgingOffsetDialog(
     }
 }
 
+/** The LED panel: what it is and the order of its colors. */
 @Composable
-fun SystemInfoCard(
-    modifier: Modifier,
-    flashSizeMb: Int,
-    rtcTemperature: Float,
+fun MatrixCard(
     isRrbbggColorOrder: Boolean,
     onColorOrderSelected: (Boolean) -> Unit
 ) {
+    InfoCard(Icons.Default.GridOn, stringResource(R.string.mc_matrix)) {
+        InfoRow(stringResource(R.string.mc_matrix_resolution))
+
+        Spacer(Modifier.height(16.dp))
+
+        PixelColorOrderSelector(
+            isRrbbgg = isRrbbggColorOrder,
+            onSelected = onColorOrderSelected
+        )
+    }
+}
+
+/**
+ * The clock's hardware. The module, the processor and the timer chip are the same in every clock
+ * and the firmware does not report them, so they come from the strings; the flash size and the
+ * temperature are read from the clock.
+ */
+@Composable
+fun SystemInfoCard(
+    flashSizeMb: Int,
+    rtcTemperature: Float
+) {
+    InfoCard(Icons.Default.PermDeviceInformation, stringResource(R.string.mc_system)) {
+        InfoRow(stringResource(R.string.mc_system_module))
+        InfoRow(stringResource(R.string.mc_system_cpu))
+
+        // Physical flash size is only known on firmware v1.7.0+ (0 = not reported); hide the row
+        // on older firmware rather than showing a meaningless "0 MB".
+        if (flashSizeMb > 0) {
+            InfoRow(stringResource(R.string.mc_clock_flash_size, flashSizeMb))
+        }
+
+        InfoRow(stringResource(R.string.mc_system_rtc))
+        InfoRow(
+            "${stringResource(R.string.mc_rtc_temperature)}: ${
+                if (rtcTemperature > 0) "+" else ""
+            }${"%.2f".format(rtcTemperature)}\u00A0${stringResource(R.string.mc_degrees_celsius)}"
+        )
+    }
+}
+
+@Composable
+private fun InfoCard(
+    icon: ImageVector,
+    title: String,
+    content: @Composable () -> Unit
+) {
     Card(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
@@ -357,41 +413,21 @@ fun SystemInfoCard(
                 .padding(16.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
-        )
-        {
-            CardTitle(
-                Icons.Default.PermDeviceInformation,
-                stringResource(R.string.mc_system)
-            )
-
-            PixelColorOrderSelector(
-                isRrbbgg = isRrbbggColorOrder,
-                onSelected = onColorOrderSelected
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = "${stringResource(R.string.mc_rtc_temperature)}: ${
-                    if (rtcTemperature > 0) "+" else ""
-                }${"%.2f".format(rtcTemperature)} ${stringResource(R.string.mc_degrees_celsius)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            // Physical flash size is only known on firmware v1.7.0+ (0 = not reported); hide the row
-            // on older firmware rather than showing a meaningless "0 MB".
-            if (flashSizeMb > 0) {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(R.string.mc_clock_flash_size, flashSizeMb),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+        ) {
+            CardTitle(icon, title)
+            content()
         }
     }
+}
+
+@Composable
+private fun InfoRow(text: String) {
+    Text(
+        modifier = Modifier.fillMaxWidth(),
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary
+    )
 }
 
 @Composable

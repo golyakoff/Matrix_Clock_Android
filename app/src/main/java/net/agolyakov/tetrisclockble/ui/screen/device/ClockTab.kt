@@ -442,13 +442,13 @@ fun AlarmItem(
                     Text(
                         text = labelTop,
                         color = color,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold)
 
                     Text(
                         text = labelBottom,
                         color = color,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold)
                 }
 

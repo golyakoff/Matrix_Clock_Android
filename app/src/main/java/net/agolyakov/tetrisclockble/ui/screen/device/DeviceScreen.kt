@@ -17,6 +17,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
@@ -253,7 +254,6 @@ private fun ConnectionScreen(
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        HeaderCard(friendlyName, macAddress)
         when (state) {
             is ConnectionState.PairingRejected -> MessageCard(
                 title = stringResource(R.string.mc_pairing_rejected_title),
@@ -381,6 +381,8 @@ fun DeviceSettings(
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        // The app's top bar above takes the status bar, the navigation bar below the rest
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             NavigationBar {
                 DeviceTab.entries.forEach { tab ->
@@ -402,11 +404,6 @@ fun DeviceSettings(
     ) { innerPadding ->
         tabStateHolder.SaveableStateProvider(selectedTab) {
             DeviceTabColumn(innerPadding) {
-                HeaderCard(
-                    deviceFriendlyName,
-                    deviceMacAddress
-                )
-
                 when (selectedTab) {
                     DeviceTab.CLOCK -> ClockTab(
                         isOn = isOn,
@@ -445,6 +442,7 @@ fun DeviceSettings(
                         firmwareVersion = firmwareVersion,
                         onFirmwareUpdateButtonClickAction = onFirmwareUpdateButtonClickAction,
                         flashSizeMb = flashSizeMb,
+                        macAddress = deviceMacAddress,
                         rtcTemperature = rtcTemperature,
                         isRrbbggColorOrder = isRrbbggColorOrder,
                         onColorOrderSelected = onColorOrderSelected,
