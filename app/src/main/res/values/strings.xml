@@ -172,7 +172,10 @@
     <string name="mc_fw_progress_amount">%1$s / %2$s КБ</string>
     <string name="mc_fw_progress_rebooting">Часы перезапускаются с новой прошивкой…</string>
     <string name="mc_fw_progress_continues">Часы обновляются сами: окно можно закрыть</string>
-    <string name="mc_fw_done">Обновлено до %1$s</string>
+    <string name="mc_fw_done">Часы работают на прошивке %1$s</string>
+    <string name="mc_fw_wifi_title_progress">Обновление по WiFi</string>
+    <string name="mc_fw_wifi_title_done">Прошивка обновлена</string>
+    <string name="mc_fw_wifi_title_failed">Обновление не удалось</string>
     <string name="mc_fw_rolled_back">Новая прошивка не запустилась, часы вернулись к %1$s</string>
     <string name="mc_fw_error_no_update">Часы не нашли новой версии</string>
     <string name="mc_fw_error_download">Часам не удалось скачать обновление: проверьте WiFi</string>

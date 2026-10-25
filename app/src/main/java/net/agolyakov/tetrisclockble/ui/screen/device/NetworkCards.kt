@@ -21,7 +21,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Refresh
@@ -645,10 +647,28 @@ private fun ClockCheckLine(info: UpdateInfo) {
 /** Progress of the update the clock installs by itself; closing it does not stop the clock. */
 @Composable
 private fun WifiUpdateDialog(update: WifiUpdate, onDismiss: () -> Unit) {
+    // The title says how it went once it is over, the text then gives the details
+    val failed = update is WifiUpdate.RolledBack || update is WifiUpdate.Failed
     AlertDialog(
         onDismissRequest = { if (update.finished) onDismiss() },
-        icon = { Icon(Icons.Default.SystemUpdateAlt, contentDescription = null) },
-        title = { Text(stringResource(R.string.mc_fw_install_wifi)) },
+        icon = {
+            when {
+                update is WifiUpdate.Done -> Icon(Icons.Default.CheckCircle, contentDescription = null)
+                failed -> Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                else -> Icon(Icons.Default.SystemUpdateAlt, contentDescription = null)
+            }
+        },
+        title = {
+            Text(
+                stringResource(
+                    when {
+                        update is WifiUpdate.Done -> R.string.mc_fw_wifi_title_done
+                        failed -> R.string.mc_fw_wifi_title_failed
+                        else -> R.string.mc_fw_wifi_title_progress
+                    }
+                )
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (update) {

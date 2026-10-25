@@ -1,3 +1,10 @@
+# Release 2.1.1
+
+- [x] The dialog of a firmware update over WiFi says how it ended in its title: "Firmware updated" or "Update failed" instead of the title of the button that started it
+- [x] The clock's time shows dashes until it is read from the clock, instead of a placeholder date with a year of +1000000000
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v2.1.0...v2.1.1
+
 # Release 2.1.0
 
 - [x] **Only your phones control the clock** (clock firmware v2.1.0+): the clock lets in only phones paired with it ("Just Works", no PIN; up to 5 phones), and a new phone can pair only within 2 minutes after the clock is powered on or after a 5-second touch of its touch pad. The app pairs on connecting; when the clock refuses, it says how to open pairing on the clock and can forget a stale pairing. Clocks with older firmware connect as before

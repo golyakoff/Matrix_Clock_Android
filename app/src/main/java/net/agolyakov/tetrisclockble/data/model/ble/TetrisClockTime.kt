@@ -41,25 +41,33 @@ data class TetrisClockTime(
         )
     }
 
+    /** False until the clock's time is read: the default is a placeholder, not a time to show. */
+    val isKnown: Boolean
+        get() = localDateTime != LocalDateTime.MIN
+
+    // An unknown time shows dashes in place of its fields, not the placeholder's date
+    private fun format(pattern: String, unknown: String): String =
+        if (isKnown) localDateTime.format(DateTimeFormatter.ofPattern(pattern)) else unknown
+
     fun formatTime(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("HH:mm:ss"))
+        format("HH:mm:ss", "--:--:--")
 
     fun formatTimeHours(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("HH"))
+        format("HH", "--")
 
     fun formatTimeMinutes(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("mm"))
+        format("mm", "--")
 
     fun formatTimeSeconds(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("ss"))
+        format("ss", "--")
 
     fun formatDate(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("dd MMMM yyyy"))
+        format("dd MMMM yyyy", "—")
 
     fun formatDayAndMonth(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("dd MMMM"))
+        format("dd MMMM", "—")
 
     fun formatYear(): String =
-        localDateTime.format(DateTimeFormatter.ofPattern("yyyy"))
+        format("yyyy", "—")
 
 }
