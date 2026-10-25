@@ -1,3 +1,10 @@
+# Release 2.1.3
+
+- [x] **One look for firmware updates**: an update by the clock itself over WiFi now takes the whole screen in the same forms as the update from the phone over Bluetooth (a question, the progress with a big ring and percent, the result with a check mark or an error and "Try again"), instead of a small dialog
+- [x] When the clock cannot install a newer release over WiFi because the release has no build for its firmware (a custom build, clock firmware v2.1.2+), the app says so and points to the update over Bluetooth instead of "The clock found no newer version"
+
+**Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v2.1.2...v2.1.3
+
 # Release 2.1.2
 
 - [x] A clock opens with its settings in place: the loading spinner stays until they are read from the clock, instead of the controls showing their defaults and then moving to the clock's values
