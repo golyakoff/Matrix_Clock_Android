@@ -105,7 +105,7 @@ fun DeviceList(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surfaceContainer)
         ) {
-            itemsIndexed(deviceList) { _, item ->
+            itemsIndexed(deviceList, key = { _, item -> item.macAddress }) { _, item ->
                 Device(item, navController, onRenameClick)
             }
         }

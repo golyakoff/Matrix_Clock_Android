@@ -259,6 +259,21 @@ class BluetoothService @Inject constructor(
 
     private var _lastConnectedDevice : TetrisClockDevice? = null
 
+    /**
+     * The clock the app is connecting or connected to. Going back to the list and opening another
+     * clock right away starts the new connection while the old one is still being torn down; the old
+     * clock's late callbacks then must not touch the state (its "disconnected" used to make
+     * tryReconnect() connect the old clock again, under the new clock's screen).
+     */
+    @Volatile private var targetAddress: String? = null
+
+    private fun notTarget(device: BluetoothDevice): Boolean {
+        val target = targetAddress ?: return false
+        if (device.address.equals(target, ignoreCase = true)) return false
+        Log.d(_tag, "Ignoring a callback of ${device.address}, connecting to $target")
+        return true
+    }
+
     private val bleManager: TetrisClockBleManager = TetrisClockBleManager(
         bluetoothAdapterProvider.getContext(),
         timeReadCharacteristicHandler,
@@ -278,30 +293,36 @@ class BluetoothService @Inject constructor(
 
     private val connectionObserver = object : ConnectionObserver {
         override fun onDeviceConnecting(device: BluetoothDevice) {
+            if (notTarget(device)) return
             _connectionState.value = ConnectionState.Connecting
         }
 
         override fun onDeviceConnected(device: BluetoothDevice) {
+            if (notTarget(device)) return
             _connectionState.value = ConnectionState.Connected
         }
 
         override fun onDeviceReady(device: BluetoothDevice) {
+            if (notTarget(device)) return
             _connectionState.value = ConnectionState.Ready
             startReadingAllCharacteristics()
             networkScope.launch { initNetwork() }
         }
 
         override fun onDeviceDisconnecting(device: BluetoothDevice) {
+            if (notTarget(device)) return
             _connectionState.value = ConnectionState.Disconnecting
         }
 
         override fun onDeviceFailedToConnect(device: BluetoothDevice, reason: Int) {
             Log.e(_tag, "Connection failed with status code, $reason")
+            if (notTarget(device)) return
             if (pairingRejected(device, reason)) return
             _connectionState.value = ConnectionState.Error("Failed to connect: $reason")
         }
 
         override fun onDeviceDisconnected(device: BluetoothDevice, reason: Int) {
+            if (notTarget(device)) return
             if (pairingRejected(device, reason)) return
             _connectionState.value = ConnectionState.Disconnected
             // A drop during an OTA transfer means the clock rebooted mid-update; remember it so the
@@ -319,6 +340,7 @@ class BluetoothService @Inject constructor(
 
     private val bondingObserver = object : BondingObserver {
         override fun onBondingRequired(device: BluetoothDevice) {
+            if (notTarget(device)) return
             bondedInThisAttempt = true
             _connectionState.value = ConnectionState.Bonding
         }
@@ -328,6 +350,7 @@ class BluetoothService @Inject constructor(
         }
 
         override fun onBondingFailed(device: BluetoothDevice) {
+            if (notTarget(device)) return
             Log.w(_tag, "Bonding failed")
             if (bleManager.clockRequiresBond) {
                 _connectionState.value = ConnectionState.PairingRejected(staleBondRemoved = false)
@@ -455,6 +478,9 @@ class BluetoothService @Inject constructor(
 
         resetDeviceState()
 
+        targetAddress = tetrisClockDevice.macAddress
+        // From now on a reconnect means this clock, also before the first connection succeeds
+        _lastConnectedDevice = tetrisClockDevice
         _connectionState.value = ConnectionState.Connecting
         val device = bluetoothAdapterProvider.getAdapter().getRemoteDevice(tetrisClockDevice.macAddress)
         bondedInThisAttempt = device.bondState != BluetoothDevice.BOND_BONDED

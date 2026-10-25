@@ -2,6 +2,8 @@
 
 - [x] **Only your phones control the clock** (clock firmware v2.1.0+): the clock lets in only phones paired with it ("Just Works", no PIN; up to 5 phones), and a new phone can pair only within 2 minutes after the clock is powered on or after a 5-second touch of its touch pad. The app pairs on connecting; when the clock refuses, it says how to open pairing on the clock and can forget a stale pairing. Clocks with older firmware connect as before
 - [x] **Connection screen**: until the clock is connected, its screen shows the connection under way (connecting, pairing, loading) or why there is none, with a retry, instead of the clock's cards with empty values
+- [x] **Live clock list**: a clock switched on shows up in the list while it is open, and one not heard for 15 seconds (switched off, out of range) leaves it; the list keeps its order as clocks come and go
+- [x] Fixed opening a clock right after leaving another one connecting the old clock again under the new clock's screen
 - [x] The settings screen no longer slides under the header
 
 **Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v2.0.0...v2.1.0

@@ -1,7 +1,11 @@
 package net.agolyakov.tetrisclockble.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -27,8 +31,22 @@ fun SetupNavGraph(
             LaunchedEffect(Unit) {
                 delay(50)
                 homeViewModel.bluetoothService.setShouldMaintainConnection(false)
-                delay(50)
-                homeViewModel.startScan()
+            }
+            // Scan only while the list is visible: not under the clock's screen, not in background
+            val lifecycleOwner = LocalLifecycleOwner.current
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_RESUME -> homeViewModel.startScan()
+                        Lifecycle.Event.ON_PAUSE -> homeViewModel.stopScan()
+                        else -> {}
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(observer)
+                onDispose {
+                    lifecycleOwner.lifecycle.removeObserver(observer)
+                    homeViewModel.stopScan()
+                }
             }
             HomeScreen(navController, homeViewModel)
         }
