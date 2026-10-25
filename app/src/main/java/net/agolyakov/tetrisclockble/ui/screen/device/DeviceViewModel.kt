@@ -136,6 +136,7 @@ class DeviceViewModel @Inject constructor(
     // Common
 
     val connectionState = bluetoothService.connectionState
+    val settingsLoaded = bluetoothService.settingsLoaded
     val currentDevice = bluetoothService.currentDevice
 
     init {

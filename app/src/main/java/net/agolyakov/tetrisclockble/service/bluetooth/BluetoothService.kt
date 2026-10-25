@@ -257,6 +257,12 @@ class BluetoothService @Inject constructor(
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
+    // The clock's settings of this connection are read: the screen shows them only then, not the
+    // defaults moving to the read values
+    private val _settingsLoaded = MutableStateFlow(false)
+    val settingsLoaded: StateFlow<Boolean> = _settingsLoaded.asStateFlow()
+    private var readyGeneration = 0
+
     private val _currentDevice = MutableStateFlow<TetrisClockDevice?>(null)
     val currentDevice: StateFlow<TetrisClockDevice?> = _currentDevice.asStateFlow()
 
@@ -297,6 +303,7 @@ class BluetoothService @Inject constructor(
     private val connectionObserver = object : ConnectionObserver {
         override fun onDeviceConnecting(device: BluetoothDevice) {
             if (notTarget(device)) return
+            _settingsLoaded.value = false
             _connectionState.value = ConnectionState.Connecting
         }
 
@@ -348,9 +355,19 @@ class BluetoothService @Inject constructor(
 
     private fun becomeReady() {
         readyAfterBond = false
+        _settingsLoaded.value = false
+        val generation = ++readyGeneration
         _connectionState.value = ConnectionState.Ready
         startReadingAllCharacteristics()
-        networkScope.launch { initNetwork() }
+        networkScope.launch {
+            initNetwork()
+            // The reads above are queued before this mark
+            bleManager.awaitQueue()
+            if (generation == readyGeneration) {
+                Log.i(_tag, "Settings of the clock read")
+                _settingsLoaded.value = true
+            }
+        }
     }
 
     /** The phone had no bond when this connection attempt started, or bonding started during it. */
@@ -530,6 +547,8 @@ class BluetoothService @Inject constructor(
 
         _connectionState.value = ConnectionState.Disconnecting
 
+        // Queued before the disconnect: the clock must not see a link Android keeps as subscribed
+        bleManager.disableAllNotifications()
         bleManager.disconnect()
             .done {
                 _currentDevice.value = null

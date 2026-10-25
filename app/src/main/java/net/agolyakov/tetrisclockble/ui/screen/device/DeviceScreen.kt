@@ -123,12 +123,14 @@ fun DeviceScreen(
     }
 
     val connectionState by viewModel.connectionState.collectAsState()
-    // Until the clock is first connected (or when it refused this phone) the screen shows only the
-    // connection, not the clock's cards with their empty defaults. Later drops (a WiFi update reboots
-    // the clock) keep the cards: their dialogs follow the reconnect.
+    val settingsLoaded by viewModel.settingsLoaded.collectAsState()
+    // Until the clock is first connected and its settings read (or when it refused this phone) the
+    // screen shows only the connection, not the clock's cards with their defaults. Later drops (a WiFi
+    // update reboots the clock) keep the cards: their dialogs follow the reconnect.
     var everReady by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(connectionState) {
-        if (connectionState == ConnectionState.Ready) everReady = true
+    val ready = connectionState == ConnectionState.Ready && settingsLoaded
+    LaunchedEffect(ready) {
+        if (ready) everReady = true
     }
 
     LaunchedEffect(bleTime) {
@@ -143,7 +145,7 @@ fun DeviceScreen(
     val friendlyName = device?.friendlyName ?: device?.deviceName ?: stringResource(R.string.mc_unnamed_device)
     val macAddress = device?.macAddress ?: stringResource(R.string.mc_unknown_address)
     if (connectionState is ConnectionState.PairingRejected ||
-        (connectionState != ConnectionState.Ready && !everReady)) {
+        (!ready && !everReady)) {
         ConnectionScreen(
             friendlyName = friendlyName,
             macAddress = macAddress,
@@ -292,7 +294,7 @@ private fun ConnectionScreen(
                     text = stringResource(
                         when (state) {
                             ConnectionState.Bonding -> R.string.mc_state_bonding
-                            ConnectionState.Connected -> R.string.mc_state_loading
+                            ConnectionState.Connected, ConnectionState.Ready -> R.string.mc_state_loading
                             else -> R.string.mc_state_connecting
                         }
                     ),

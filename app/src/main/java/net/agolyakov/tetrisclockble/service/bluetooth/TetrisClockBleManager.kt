@@ -592,6 +592,24 @@ class TetrisClockBleManager(
     }
 
     /** Whether the clock has the network characteristics (firmware v2.0.0+). */
+    /**
+     * Turns the notifications off; to be called right before disconnecting. The clock remembers the
+     * subscriptions of a bonded phone across connections, and Android often keeps the link to a
+     * bonded clock open after the app lets it go: such a link would look subscribed, so the clock
+     * (firmware v2.1.1+) would never drop it as idle and never advertise again. Only on a bonded
+     * link: writing a descriptor on an unencrypted one would make Android start pairing.
+     */
+    fun disableAllNotifications() {
+        if (!isConnected || bluetoothDevice?.bondState != BluetoothDevice.BOND_BONDED) return
+        val notifying = listOfNotNull(mcTimeCharacteristic, mcOnOffCharacteristic, mcVersionCharacteristic) +
+            NETWORK_NOTIFYING_CHAR_UUIDS.mapNotNull { networkCharacteristics[it] }
+        for (characteristic in notifying) {
+            disableNotifications(characteristic)
+                .fail { _, status -> Log.w(_tag, "Could not disable notifications of ${characteristic.uuid}, status=$status") }
+                .enqueue()
+        }
+    }
+
     fun hasNetworkCharacteristics(): Boolean = MC_TIME_ZONE_CHAR_UUID in networkCharacteristics
 
     /** Whether the clock has this one of the optional characteristics in [NETWORK_CHAR_UUIDS]. */
@@ -599,6 +617,16 @@ class TetrisClockBleManager(
 
     private fun networkCharacteristic(uuid: UUID): BluetoothGattCharacteristic =
         networkCharacteristics[uuid] ?: throw IllegalStateException("Not connected (no characteristic $uuid)")
+
+    /** Returns when the requests queued so far are done (or failed: a disconnect clears the queue):
+     *  the queue is FIFO, so a read queued now completes after them. */
+    suspend fun awaitQueue() {
+        try {
+            readCharacteristic(mcVersionCharacteristic).suspend()
+        } catch (e: Exception) {
+            Log.w(_tag, "Request queue cleared", e)
+        }
+    }
 
     /** Reads a network characteristic; throws on a GATT error. */
     suspend fun readNetwork(uuid: UUID): ByteArray =
