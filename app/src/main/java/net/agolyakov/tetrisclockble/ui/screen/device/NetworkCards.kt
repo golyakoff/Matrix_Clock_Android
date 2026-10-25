@@ -149,7 +149,7 @@ fun BluetoothCard(
     SettingsCard {
         CardTitle(Icons.Default.Bluetooth, stringResource(R.string.mc_bluetooth))
 
-        InfoLine(stringResource(R.string.mc_clock_mac_address, macAddress))
+        InfoRow(stringResource(R.string.mc_clock_mac_address), macAddress)
 
         // The name can be changed on firmware v2.0.0+ only
         savedName?.let {

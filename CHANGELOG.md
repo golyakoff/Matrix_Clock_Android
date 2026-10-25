@@ -6,6 +6,8 @@
 - [x] Fixed opening a clock right after leaving another one connecting the old clock again under the new clock's screen
 - [x] Fixed pairing with a clock that refuses the phone: Android's pairing prompt no longer drops the connection, the refusal stays on screen instead of an endless reconnect, and the clock's cards appear only once the phone is paired
 - [x] The settings screen no longer slides under the header
+- [x] **New look**: the top bar takes the theme's colors instead of black and shows the open clock's name; the big name card is gone. The Settings tab is ordered Firmware, time accuracy, **Bluetooth** (the clock's MAC address and its name), WiFi, **Matrix** (resolution, pixel color order) and **System** (module, CPU, flash, timer chip and its temperature), each parameter its name above its value
+- [x] Fits an enlarged system font (checked at 1.25x): smaller title sizes from the theme, time cards of equal height, units kept on the line of their number
 
 **Full Changelog**: https://github.com/golyakoff/Matrix_Clock_Android/compare/v2.0.0...v2.1.0
 

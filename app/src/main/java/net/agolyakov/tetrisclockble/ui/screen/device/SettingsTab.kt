@@ -352,7 +352,7 @@ fun MatrixCard(
     onColorOrderSelected: (Boolean) -> Unit
 ) {
     InfoCard(Icons.Default.GridOn, stringResource(R.string.mc_matrix)) {
-        InfoRow(stringResource(R.string.mc_matrix_resolution))
+        InfoRow(stringResource(R.string.mc_matrix_resolution), stringResource(R.string.mc_matrix_resolution_value))
 
         Spacer(Modifier.height(16.dp))
 
@@ -374,20 +374,19 @@ fun SystemInfoCard(
     rtcTemperature: Float
 ) {
     InfoCard(Icons.Default.PermDeviceInformation, stringResource(R.string.mc_system)) {
-        InfoRow(stringResource(R.string.mc_system_module))
-        InfoRow(stringResource(R.string.mc_system_cpu))
+        InfoRow(stringResource(R.string.mc_system_module), stringResource(R.string.mc_system_module_value))
+        InfoRow(stringResource(R.string.mc_system_cpu), stringResource(R.string.mc_system_cpu_value))
 
         // Physical flash size is only known on firmware v1.7.0+ (0 = not reported); hide the row
         // on older firmware rather than showing a meaningless "0 MB".
         if (flashSizeMb > 0) {
-            InfoRow(stringResource(R.string.mc_clock_flash_size, flashSizeMb))
+            InfoRow(stringResource(R.string.mc_clock_flash_size), stringResource(R.string.mc_clock_flash_size_value, flashSizeMb))
         }
 
-        InfoRow(stringResource(R.string.mc_system_rtc))
+        InfoRow(stringResource(R.string.mc_system_rtc), stringResource(R.string.mc_system_rtc_value))
         InfoRow(
-            "${stringResource(R.string.mc_rtc_temperature)}: ${
-                if (rtcTemperature > 0) "+" else ""
-            }${"%.2f".format(rtcTemperature)}\u00A0${stringResource(R.string.mc_degrees_celsius)}"
+            stringResource(R.string.mc_rtc_temperature),
+            "${if (rtcTemperature > 0) "+" else ""}${"%.2f".format(rtcTemperature)}\u00A0${stringResource(R.string.mc_degrees_celsius)}"
         )
     }
 }
@@ -420,15 +419,6 @@ private fun InfoCard(
     }
 }
 
-@Composable
-private fun InfoRow(text: String) {
-    Text(
-        modifier = Modifier.fillMaxWidth(),
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.primary
-    )
-}
 
 @Composable
 fun PixelColorOrderSelector(

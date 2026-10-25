@@ -31,6 +31,30 @@ import androidx.compose.ui.unit.dp
 
 // Building blocks shared by the cards of both tabs
 
+/**
+ * One parameter of an information card: its name small and muted, its value below on a line of its
+ * own, so a long value wraps under itself instead of under the name. Rows are spaced apart.
+ */
+@Composable
+fun InfoRow(label: String, value: String) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.outline
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
 @Composable
 fun CardTitle(
     imageVector: ImageVector,

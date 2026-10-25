@@ -67,14 +67,19 @@
     <string name="mc_anim_audio_tape">Аудиокассета</string>
     <string name="mc_splash_preview">Посмотреть заставку</string>
     <string name="mc_clock_firmware_version">Версия прошивки часов: %1$s</string>
-    <string name="mc_clock_mac_address">MAC-адрес: %1$s</string>
+    <string name="mc_clock_mac_address">MAC-адрес</string>
     <string name="mc_bluetooth">Bluetooth</string>
     <string name="mc_matrix">Матрица</string>
-    <string name="mc_matrix_resolution">Разрешение: 64 × 32 пикселя</string>
-    <string name="mc_system_module">Модуль: ESP32-WROOM-32D</string>
-    <string name="mc_system_cpu">Процессор: Xtensa LX6, 2 ядра, 240\u00A0МГц</string>
-    <string name="mc_system_rtc">Чип таймера: DS3231</string>
-    <string name="mc_clock_flash_size">Флэш-память часов: %1$d\u00A0МБ</string>
+    <string name="mc_matrix_resolution">Разрешение</string>
+    <string name="mc_matrix_resolution_value">64 × 32 пикселя</string>
+    <string name="mc_system_module">Модуль</string>
+    <string name="mc_system_module_value" translatable="false">ESP32-WROOM-32D</string>
+    <string name="mc_system_cpu">Процессор</string>
+    <string name="mc_system_cpu_value">Xtensa LX6, 2 ядра, 240\u00A0МГц</string>
+    <string name="mc_system_rtc">Чип таймера</string>
+    <string name="mc_system_rtc_value" translatable="false">DS3231</string>
+    <string name="mc_clock_flash_size">Флэш-память</string>
+    <string name="mc_clock_flash_size_value">%1$d\u00A0МБ</string>
     <string name="mc_configure">Настроить</string>
     <string name="mc_language_label">Язык:</string>
     <string name="mc_back">Назад</string>
